@@ -156,22 +156,37 @@ pub extern "C" fn memoryos_search(query: *const c_char) -> *mut c_char {
 // ── Storage analytics ──────────────────────────────────────────────────────────
 
 /// Get storage statistics as JSON.
-/// Returns: {total_files, total_bytes, duplicate_count, duplicate_bytes, recoverable_bytes}
+/// Returns: {total_files, total_bytes, indexed_files, pending_files, duplicate_count, duplicate_bytes, recoverable_bytes}
 #[no_mangle]
 pub extern "C" fn memoryos_storage_stats() -> *mut c_char {
     let guard = DB.lock().unwrap();
     match guard.as_ref() {
         Some(db) => {
             let total_files = db.count_files().unwrap_or(0);
-            // Additional analytics can be implemented in MetadataDb
+            let total_bytes = db.total_size_bytes().unwrap_or(0);
+            let indexed_files = db.count_by_status(&IndexingStatus::Completed).unwrap_or(0);
+            let pending_files = db.count_by_status(&IndexingStatus::Pending).unwrap_or(0);
+            let duplicate_groups = db.get_duplicate_groups().unwrap_or_default();
+            let duplicate_count: usize = duplicate_groups
+                .iter()
+                .map(|(_, paths)| paths.len().saturating_sub(1))
+                .sum();
+            let duplicate_bytes: u64 = duplicate_groups
+                .iter()
+                .flat_map(|(_, paths)| paths.iter().skip(1))
+                .filter_map(|p| db.get_file_by_path(p).ok().flatten())
+                .map(|f| f.size_bytes)
+                .sum();
+            let large_files = db.get_large_files(50 * 1024 * 1024).unwrap_or_default();
             let stats = serde_json::json!({
                 "total_files": total_files,
-                "total_bytes": 0_u64,   // populated by indexer
-                "indexed_files": total_files,
-                "pending_files": 0_u64,
-                "duplicate_count": 0_u64,
-                "duplicate_bytes": 0_u64,
-                "recoverable_bytes": 0_u64,
+                "total_bytes": total_bytes,
+                "indexed_files": indexed_files,
+                "pending_files": pending_files,
+                "duplicate_count": duplicate_count,
+                "duplicate_bytes": duplicate_bytes,
+                "recoverable_bytes": duplicate_bytes,
+                "large_file_count": large_files.len(),
                 "blurry_count": 0_u64,
             });
             cstring_or_empty(&stats.to_string())
@@ -439,6 +454,185 @@ pub extern "C" fn memoryos_backup_restore(
 
     match crate::toolbox::restore_backup(b_path, d_dir, key) {
         Ok(_) => 0,
+
         Err(_) => -1,
+    }
+}
+
+// ── Tags ───────────────────────────────────────────────────────────────────────
+
+/// List all tags as JSON array.
+#[no_mangle]
+pub extern "C" fn memoryos_tag_list() -> *mut c_char {
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            let tags = db.list_tags().unwrap_or_default();
+            let json = serde_json::to_string(&tags).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        None => cstring_or_empty("[]"),
+    }
+}
+
+/// Create a new tag. Returns 0 on success.
+#[no_mangle]
+pub extern "C" fn memoryos_tag_create(name: *const c_char, color: *const c_char) -> c_int {
+    let tag_name = unsafe { str_from_ptr(name) }.unwrap_or("");
+    let tag_color = unsafe { str_from_ptr(color) };
+    if tag_name.is_empty() {
+        return -1;
+    }
+
+    let mut tag = crate::models::Tag::new(tag_name);
+    tag.color = tag_color.map(String::from);
+
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => match db.insert_tag(&tag) {
+            Ok(_) => 0,
+            Err(_) => -1,
+        },
+        None => -1,
+    }
+}
+
+/// Add a tag to a file. Returns 0 on success.
+#[no_mangle]
+pub extern "C" fn memoryos_tag_file(file_id: *const c_char, tag_id: *const c_char) -> c_int {
+    let f_id = unsafe { str_from_ptr(file_id) }.unwrap_or("");
+    let t_id = unsafe { str_from_ptr(tag_id) }.unwrap_or("");
+    let f_uuid = match uuid::Uuid::parse_str(f_id) {
+        Ok(u) => u,
+        Err(_) => return -1,
+    };
+    let t_uuid = match uuid::Uuid::parse_str(t_id) {
+        Ok(u) => u,
+        Err(_) => return -1,
+    };
+
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => match db.add_tag_to_file(&f_uuid, &t_uuid) {
+            Ok(_) => 0,
+            Err(_) => -1,
+        },
+        None => -1,
+    }
+}
+
+// ── Collections ────────────────────────────────────────────────────────────────
+
+/// List all collections as JSON.
+#[no_mangle]
+pub extern "C" fn memoryos_collection_list() -> *mut c_char {
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            let cols = db.list_collections().unwrap_or_default();
+            let json = serde_json::to_string(&cols).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        None => cstring_or_empty("[]"),
+    }
+}
+
+/// Create a collection. Returns 0 on success.
+#[no_mangle]
+pub extern "C" fn memoryos_collection_create(
+    name: *const c_char,
+    description: *const c_char,
+) -> c_int {
+    let col_name = unsafe { str_from_ptr(name) }.unwrap_or("");
+    let col_desc = unsafe { str_from_ptr(description) };
+    if col_name.is_empty() {
+        return -1;
+    }
+
+    let mut col = crate::models::Collection::new(col_name);
+    col.description = col_desc.map(String::from);
+
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => match db.insert_collection(&col) {
+            Ok(_) => 0,
+            Err(_) => -1,
+        },
+        None => -1,
+    }
+}
+
+/// Add a file to a collection. Returns 0 on success.
+#[no_mangle]
+pub extern "C" fn memoryos_collection_add_file(
+    collection_id: *const c_char,
+    file_id: *const c_char,
+) -> c_int {
+    let c_id = unsafe { str_from_ptr(collection_id) }.unwrap_or("");
+    let f_id = unsafe { str_from_ptr(file_id) }.unwrap_or("");
+    let c_uuid = match uuid::Uuid::parse_str(c_id) {
+        Ok(u) => u,
+        Err(_) => return -1,
+    };
+    let f_uuid = match uuid::Uuid::parse_str(f_id) {
+        Ok(u) => u,
+        Err(_) => return -1,
+    };
+
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => match db.add_file_to_collection(&c_uuid, &f_uuid) {
+            Ok(_) => 0,
+            Err(_) => -1,
+        },
+        None => -1,
+    }
+}
+
+// ── Large files ────────────────────────────────────────────────────────────────
+
+/// Get files larger than 50MB as JSON array.
+#[no_mangle]
+pub extern "C" fn memoryos_get_large_files(min_size_mb: c_int) -> *mut c_char {
+    let min_bytes = (min_size_mb as u64) * 1024 * 1024;
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            let files = db.get_large_files(min_bytes).unwrap_or_default();
+            let json = serde_json::to_string(&files).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        None => cstring_or_empty("[]"),
+    }
+}
+
+/// Compute and store SHA-256 hash for a file. Returns 0 on success.
+#[no_mangle]
+pub extern "C" fn memoryos_hash_file(file_id: *const c_char) -> c_int {
+    let id_str = unsafe { str_from_ptr(file_id) }.unwrap_or("");
+    let f_uuid = match uuid::Uuid::parse_str(id_str) {
+        Ok(u) => u,
+        Err(_) => return -1,
+    };
+
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            if let Ok(Some(entry)) = db.get_file_by_id(&f_uuid) {
+                let file_data = match std::fs::read(&entry.path) {
+                    Ok(d) => d,
+                    Err(_) => return -1,
+                };
+                use sha2::{Digest, Sha256};
+                let hash = format!("{:x}", Sha256::digest(&file_data));
+                match db.update_file_hash(&f_uuid, &hash) {
+                    Ok(_) => 0,
+                    Err(_) => -1,
+                }
+            } else {
+                -1
+            }
+        }
+        None => -1,
     }
 }

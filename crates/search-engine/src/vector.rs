@@ -1,7 +1,7 @@
 //! Vector/semantic search using sqlite-vec extension.
 
 use crate::error::SearchError;
-use crate::types::{MatchType, SearchResultItem};
+use crate::types::SearchResultItem;
 use tracing::warn;
 
 /// Embedding vector dimension (matches embedding model output).

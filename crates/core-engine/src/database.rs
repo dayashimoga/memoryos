@@ -165,6 +165,15 @@ impl MetadataDb {
         Ok(())
     }
 
+    /// Update the SHA-256 hash for a file.
+    pub fn update_file_hash(&self, id: &Uuid, hash: &str) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE files SET sha256_hash = ?1 WHERE id = ?2",
+            params![hash, id.to_string()],
+        )?;
+        Ok(())
+    }
+
     /// List all files marked as encrypted (vault members).
     pub fn list_encrypted_files(&self) -> Result<Vec<FileEntry>, CoreError> {
         let mut stmt = self
@@ -195,6 +204,223 @@ impl MetadataDb {
             |row| row.get(0),
         )?;
         Ok(total as u64)
+    }
+
+    /// Get groups of duplicate files (same SHA-256 hash).
+    pub fn get_duplicate_groups(&self) -> Result<Vec<(String, Vec<String>)>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            r#"SELECT sha256_hash, GROUP_CONCAT(path, '\n') as paths
+               FROM files
+               WHERE sha256_hash IS NOT NULL AND sha256_hash != ''
+               GROUP BY sha256_hash
+               HAVING COUNT(*) > 1"#,
+        )?;
+        let groups = stmt
+            .query_map([], |row| {
+                let hash: String = row.get(0)?;
+                let paths_str: String = row.get(1)?;
+                let paths: Vec<String> = paths_str.split('\n').map(String::from).collect();
+                Ok((hash, paths))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(groups)
+    }
+
+    /// Get files larger than the given threshold (bytes).
+    pub fn get_large_files(&self, min_bytes: u64) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM files WHERE size_bytes >= ?1 ORDER BY size_bytes DESC LIMIT 200",
+        )?;
+        let entries = stmt
+            .query_map(params![min_bytes as i64], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    /// Get files within a date range.
+    pub fn get_files_by_date_range(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM files WHERE created_at >= ?1 AND created_at <= ?2 ORDER BY created_at DESC LIMIT 500",
+        )?;
+        let entries = stmt
+            .query_map(params![from, to], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    // ── Tag operations ────────────────────────────────────────────────────────
+
+    /// Insert a tag.
+    pub fn insert_tag(&self, tag: &crate::models::Tag) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO tags (id, name, color, created_at) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                tag.id.to_string(),
+                tag.name,
+                tag.color,
+                tag.created_at.to_rfc3339()
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// List all tags.
+    pub fn list_tags(&self) -> Result<Vec<crate::models::Tag>, CoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT id, name, color, created_at FROM tags ORDER BY name")?;
+        let tags = stmt
+            .query_map([], |row| {
+                let id_str: String = row.get(0)?;
+                let created_str: String = row.get(3)?;
+                Ok(crate::models::Tag {
+                    id: uuid::Uuid::parse_str(&id_str).unwrap_or_default(),
+                    name: row.get(1)?,
+                    color: row.get(2)?,
+                    created_at: chrono::DateTime::parse_from_rfc3339(&created_str)
+                        .map(|d| d.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now()),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(tags)
+    }
+
+    /// Add a tag to a file.
+    pub fn add_tag_to_file(
+        &self,
+        file_id: &uuid::Uuid,
+        tag_id: &uuid::Uuid,
+    ) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO file_tags (file_id, tag_id) VALUES (?1, ?2)",
+            params![file_id.to_string(), tag_id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// Get tags for a file.
+    pub fn get_tags_for_file(&self, file_id: &uuid::Uuid) -> Result<Vec<String>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT t.name FROM tags t INNER JOIN file_tags ft ON t.id = ft.tag_id WHERE ft.file_id = ?1",
+        )?;
+        let tags = stmt
+            .query_map(params![file_id.to_string()], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(tags)
+    }
+
+    // ── Collection operations ─────────────────────────────────────────────────
+
+    /// Insert a collection.
+    pub fn insert_collection(&self, col: &Collection) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT INTO collections (id, name, description, icon, file_count, created_at, updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7)",
+            params![
+                col.id.to_string(),
+                col.name,
+                col.description,
+                col.icon,
+                col.file_count as i64,
+                col.created_at.to_rfc3339(),
+                col.updated_at.to_rfc3339()
+            ],
+        )?;
+        Ok(())
+    }
+
+    /// List all collections.
+    pub fn list_collections(&self) -> Result<Vec<Collection>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, description, icon, file_count, created_at, updated_at FROM collections ORDER BY updated_at DESC",
+        )?;
+        let cols = stmt
+            .query_map([], |row| {
+                let id_str: String = row.get(0)?;
+                let created_str: String = row.get(5)?;
+                let updated_str: String = row.get(6)?;
+                Ok(Collection {
+                    id: uuid::Uuid::parse_str(&id_str).unwrap_or_default(),
+                    name: row.get(1)?,
+                    description: row.get(2)?,
+                    icon: row.get(3)?,
+                    file_count: row.get::<_, i64>(4)? as usize,
+                    created_at: chrono::DateTime::parse_from_rfc3339(&created_str)
+                        .map(|d| d.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now()),
+                    updated_at: chrono::DateTime::parse_from_rfc3339(&updated_str)
+                        .map(|d| d.with_timezone(&Utc))
+                        .unwrap_or_else(|_| Utc::now()),
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(cols)
+    }
+
+    /// Delete a collection.
+    pub fn delete_collection(&self, id: &uuid::Uuid) -> Result<usize, CoreError> {
+        let affected = self.conn.execute(
+            "DELETE FROM collections WHERE id = ?1",
+            params![id.to_string()],
+        )?;
+        Ok(affected)
+    }
+
+    /// Add a file to a collection.
+    pub fn add_file_to_collection(
+        &self,
+        collection_id: &uuid::Uuid,
+        file_id: &uuid::Uuid,
+    ) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO collection_files (collection_id, file_id, added_at) VALUES (?1, ?2, ?3)",
+            params![collection_id.to_string(), file_id.to_string(), Utc::now().to_rfc3339()],
+        )?;
+        // Update file count
+        self.conn.execute(
+            "UPDATE collections SET file_count = (SELECT COUNT(*) FROM collection_files WHERE collection_id = ?1) WHERE id = ?1",
+            params![collection_id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// Get files in a collection.
+    pub fn get_files_in_collection(
+        &self,
+        collection_id: &uuid::Uuid,
+    ) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT f.* FROM files f INNER JOIN collection_files cf ON f.id = cf.file_id WHERE cf.collection_id = ?1 ORDER BY cf.added_at DESC",
+        )?;
+        let entries = stmt
+            .query_map(params![collection_id.to_string()], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    // ── Activity logging ──────────────────────────────────────────────────────
+
+    /// Log an activity event.
+    pub fn log_activity(
+        &self,
+        event_type: &str,
+        file_id: Option<&uuid::Uuid>,
+        detail: Option<&str>,
+    ) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT INTO activity_log (event_type, file_id, detail, occurred_at) VALUES (?1, ?2, ?3, ?4)",
+            params![
+                event_type,
+                file_id.map(|id| id.to_string()),
+                detail,
+                Utc::now().to_rfc3339()
+            ],
+        )?;
+        Ok(())
     }
 
     fn row_to_file_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileEntry> {

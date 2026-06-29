@@ -1,4 +1,4 @@
-# MemoryOS User Journey Smoke Tests
+﻿# MemoryOS User Journey Smoke Tests
 [CmdletBinding()]
 param()
 Write-Host "💨 Executing user journey E2E smoke tests..." -ForegroundColor Cyan

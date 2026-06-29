@@ -1,4 +1,4 @@
-# MemoryOS Deep Clean Automation
+﻿# MemoryOS Deep Clean Automation
 [CmdletBinding()]
 param()
 Write-Host "🧹 Deep cleaning MemoryOS docker containers & build targets..." -ForegroundColor Yellow

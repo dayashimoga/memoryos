@@ -2,7 +2,6 @@
 
 use crate::error::DuplicateError;
 use image::imageops::FilterType;
-use image::GrayImage;
 
 const PHASH_SIZE: u32 = 32;
 const PHASH_SMALL: u32 = 8;

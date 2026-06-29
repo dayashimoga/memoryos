@@ -1,4 +1,4 @@
-# MemoryOS Extended Test Suite
+﻿# MemoryOS Extended Test Suite
 [CmdletBinding()]
 param()
 Write-Host "🚀 Running full automated verification suite (Rust + Flutter)..." -ForegroundColor Cyan

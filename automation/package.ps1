@@ -1,4 +1,4 @@
-# MemoryOS Packaging Engine
+﻿# MemoryOS Packaging Engine
 [CmdletBinding()]
 param()
 Write-Host "🤖 Packaging android APK/AAB distribution binaries..." -ForegroundColor Cyan

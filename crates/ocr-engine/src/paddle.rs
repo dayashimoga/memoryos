@@ -6,7 +6,7 @@
 use crate::error::OcrError;
 use crate::types::{OcrBackend, OcrResult, TextRegion};
 use std::time::Instant;
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// Extract text from an image file using PaddleOCR.
 pub async fn extract(image_path: &str) -> Result<OcrResult, OcrError> {

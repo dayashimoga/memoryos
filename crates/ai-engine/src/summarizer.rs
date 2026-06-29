@@ -2,7 +2,6 @@
 
 use crate::error::AiError;
 use crate::types::{GenerateRequest, GenerateResponse};
-use tracing::debug;
 
 /// Summarize a block of text using the local AI model.
 pub async fn summarize(text: &str, model_id: &str, max_words: usize) -> Result<String, AiError> {

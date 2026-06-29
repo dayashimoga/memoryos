@@ -1,4 +1,4 @@
-# MemoryOS Code Coverage Compiler
+﻿# MemoryOS Code Coverage Compiler
 [CmdletBinding()]
 param()
 Write-Host "📊 Running coverage verification suite..." -ForegroundColor Cyan

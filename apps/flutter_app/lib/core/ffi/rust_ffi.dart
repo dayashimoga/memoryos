@@ -84,6 +84,40 @@ typedef BackupRestoreFunc = Int32 Function(
 typedef BackupRestoreDart = int Function(
     Pointer<Utf8> backupPath, Pointer<Utf8> dataDir, Pointer<Utf8> keyPhrase);
 
+// Tag FFI
+typedef TagListFunc = Pointer<Utf8> Function();
+typedef TagListDart = Pointer<Utf8> Function();
+
+typedef TagCreateFunc = Int32 Function(Pointer<Utf8> name, Pointer<Utf8> color);
+typedef TagCreateDart = int Function(Pointer<Utf8> name, Pointer<Utf8> color);
+
+typedef TagFileFunc = Int32 Function(
+    Pointer<Utf8> fileId, Pointer<Utf8> tagId);
+typedef TagFileDart = int Function(
+    Pointer<Utf8> fileId, Pointer<Utf8> tagId);
+
+// Collection FFI
+typedef CollectionListFunc = Pointer<Utf8> Function();
+typedef CollectionListDart = Pointer<Utf8> Function();
+
+typedef CollectionCreateFunc = Int32 Function(
+    Pointer<Utf8> name, Pointer<Utf8> description);
+typedef CollectionCreateDart = int Function(
+    Pointer<Utf8> name, Pointer<Utf8> description);
+
+typedef CollectionAddFileFunc = Int32 Function(
+    Pointer<Utf8> collectionId, Pointer<Utf8> fileId);
+typedef CollectionAddFileDart = int Function(
+    Pointer<Utf8> collectionId, Pointer<Utf8> fileId);
+
+// Large files FFI
+typedef GetLargeFilesFunc = Pointer<Utf8> Function(Int32 minSizeMb);
+typedef GetLargeFilesDart = Pointer<Utf8> Function(int minSizeMb);
+
+// Hash FFI
+typedef HashFileFunc = Int32 Function(Pointer<Utf8> fileId);
+typedef HashFileDart = int Function(Pointer<Utf8> fileId);
+
 class RustFfi {
   static DynamicLibrary? _lib;
   static bool _loadFailed = false;
@@ -112,6 +146,14 @@ class RustFfi {
   static ArchiveExtractDart? _archiveExtract;
   static BackupPerformDart? _backupPerform;
   static BackupRestoreDart? _backupRestore;
+  static TagListDart? _tagList;
+  static TagCreateDart? _tagCreate;
+  static TagFileDart? _tagFile;
+  static CollectionListDart? _collectionList;
+  static CollectionCreateDart? _collectionCreate;
+  static CollectionAddFileDart? _collectionAddFile;
+  static GetLargeFilesDart? _getLargeFiles;
+  static HashFileDart? _hashFile;
 
   static void initialize() {
     if (kIsWeb) {
@@ -175,6 +217,28 @@ class RustFfi {
       _backupRestore = _lib!
           .lookupFunction<BackupRestoreFunc, BackupRestoreDart>(
               'memoryos_backup_restore');
+
+      // Tags
+      _tagList = _lib!
+          .lookupFunction<TagListFunc, TagListDart>('memoryos_tag_list');
+      _tagCreate = _lib!
+          .lookupFunction<TagCreateFunc, TagCreateDart>('memoryos_tag_create');
+      _tagFile = _lib!
+          .lookupFunction<TagFileFunc, TagFileDart>('memoryos_tag_file');
+
+      // Collections
+      _collectionList = _lib!.lookupFunction<CollectionListFunc,
+          CollectionListDart>('memoryos_collection_list');
+      _collectionCreate = _lib!.lookupFunction<CollectionCreateFunc,
+          CollectionCreateDart>('memoryos_collection_create');
+      _collectionAddFile = _lib!.lookupFunction<CollectionAddFileFunc,
+          CollectionAddFileDart>('memoryos_collection_add_file');
+
+      // Large files & hash
+      _getLargeFiles = _lib!.lookupFunction<GetLargeFilesFunc,
+          GetLargeFilesDart>('memoryos_get_large_files');
+      _hashFile = _lib!
+          .lookupFunction<HashFileFunc, HashFileDart>('memoryos_hash_file');
     } catch (e) {
       debugPrint(
           'Failed to load native MemoryOS engine: $e. Falling back to local simulated db.');
@@ -372,6 +436,84 @@ class RustFfi {
     malloc.free(pathPtr);
     malloc.free(dirPtr);
     malloc.free(keyPtr);
+    return res;
+  }
+
+  // ── Tags ──────────────────────────────────────────────────────────
+
+  static String tagList() {
+    if (!isAvailable) return '[]';
+    final ptr = _tagList!();
+    final str = ptr.toDartString();
+    _freeString!(ptr);
+    return str;
+  }
+
+  static int tagCreate(String name, String? color) {
+    if (!isAvailable) return -1;
+    final namePtr = name.toNativeUtf8();
+    final colorPtr = (color ?? '').toNativeUtf8();
+    final res = _tagCreate!(namePtr, colorPtr);
+    malloc.free(namePtr);
+    malloc.free(colorPtr);
+    return res;
+  }
+
+  static int tagFile(String fileId, String tagId) {
+    if (!isAvailable) return -1;
+    final fPtr = fileId.toNativeUtf8();
+    final tPtr = tagId.toNativeUtf8();
+    final res = _tagFile!(fPtr, tPtr);
+    malloc.free(fPtr);
+    malloc.free(tPtr);
+    return res;
+  }
+
+  // ── Collections ───────────────────────────────────────────────────
+
+  static String collectionList() {
+    if (!isAvailable) return '[]';
+    final ptr = _collectionList!();
+    final str = ptr.toDartString();
+    _freeString!(ptr);
+    return str;
+  }
+
+  static int collectionCreate(String name, String? description) {
+    if (!isAvailable) return -1;
+    final namePtr = name.toNativeUtf8();
+    final descPtr = (description ?? '').toNativeUtf8();
+    final res = _collectionCreate!(namePtr, descPtr);
+    malloc.free(namePtr);
+    malloc.free(descPtr);
+    return res;
+  }
+
+  static int collectionAddFile(String collectionId, String fileId) {
+    if (!isAvailable) return -1;
+    final cPtr = collectionId.toNativeUtf8();
+    final fPtr = fileId.toNativeUtf8();
+    final res = _collectionAddFile!(cPtr, fPtr);
+    malloc.free(cPtr);
+    malloc.free(fPtr);
+    return res;
+  }
+
+  // ── Large files & hash ────────────────────────────────────────────
+
+  static String getLargeFiles(int minSizeMb) {
+    if (!isAvailable) return '[]';
+    final ptr = _getLargeFiles!(minSizeMb);
+    final str = ptr.toDartString();
+    _freeString!(ptr);
+    return str;
+  }
+
+  static int hashFile(String fileId) {
+    if (!isAvailable) return -1;
+    final idPtr = fileId.toNativeUtf8();
+    final res = _hashFile!(idPtr);
+    malloc.free(idPtr);
     return res;
   }
 }

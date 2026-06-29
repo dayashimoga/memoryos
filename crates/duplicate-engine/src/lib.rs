@@ -10,7 +10,7 @@ pub use types::{DuplicateGroup, DuplicateReport, DuplicateType};
 use crate::phash::compute_phash;
 use sha2::{Digest, Sha256};
 use std::path::Path;
-use tracing::{debug, info};
+use tracing::debug;
 
 /// Compute SHA-256 hash of a file.
 pub fn sha256_file(path: &str) -> Result<String, DuplicateError> {

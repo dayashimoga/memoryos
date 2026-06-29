@@ -1,4 +1,4 @@
-# MemoryOS Gap Analysis Runner
+﻿# MemoryOS Gap Analysis Runner
 [CmdletBinding()]
 param()
 Write-Host "🔍 Checking unimplemented feature gaps..." -ForegroundColor Cyan

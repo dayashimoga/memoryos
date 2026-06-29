@@ -186,7 +186,7 @@ Write-Host "✅ Install complete." -ForegroundColor Green
 
     for name, content in scripts.items():
         filepath = os.path.join(automation_dir, name)
-        with open(filepath, 'w', newline='\r\n', encoding='utf-8') as f:
+        with open(filepath, 'w', newline='\r\n', encoding='utf-8-sig') as f:
             f.write(content.strip() + "\n")
         print(f"Generated automation script: {filepath}")
 

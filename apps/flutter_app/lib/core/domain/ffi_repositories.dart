@@ -129,7 +129,16 @@ class FfiFileRepository implements FileRepository {
   Future<List<FileEntry>> getBlurryImages() async => [];
 
   @override
-  Future<List<FileEntry>> getLargeFiles({int minSizeMb = 50}) async => [];
+  Future<List<FileEntry>> getLargeFiles({int minSizeMb = 50}) async {
+    if (!RustFfi.isAvailable) return [];
+    try {
+      final jsonStr = RustFfi.getLargeFiles(minSizeMb);
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => _parseFileEntry(item)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
   Future<List<FileEntry>> getFavorites() async => [];
@@ -307,6 +316,69 @@ class FfiSearchRepository implements SearchRepository {
   @override
   Future<List<FileEntry>> findByColor(String colorHex) async =>
       _fallback.findByColor(colorHex);
+}
+
+class FfiCollectionRepository implements CollectionRepository {
+  final CollectionRepository _fallback = const StubCollectionRepository();
+
+  const FfiCollectionRepository();
+
+  @override
+  Future<List<Collection>> getAllCollections() async {
+    if (!RustFfi.isAvailable) return _fallback.getAllCollections();
+    try {
+      final jsonStr = RustFfi.collectionList();
+      final List decoded = jsonDecode(jsonStr);
+      return decoded
+          .map((item) => Collection(
+                id: item['id'] ?? '',
+                name: item['name'] ?? '',
+                description: item['description'],
+                fileCount: item['file_count'] ?? 0,
+                createdAt:
+                    DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
+                updatedAt:
+                    DateTime.tryParse(item['updated_at'] ?? '') ?? DateTime.now(),
+              ))
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @override
+  Future<List<Collection>> getSmartCollections() async =>
+      _fallback.getSmartCollections();
+
+  @override
+  Future<Collection?> getCollectionById(String id) async =>
+      _fallback.getCollectionById(id);
+
+  @override
+  Future<void> createCollection(Collection collection) async {
+    if (RustFfi.isAvailable) {
+      RustFfi.collectionCreate(collection.name, collection.description);
+    }
+  }
+
+  @override
+  Future<void> updateCollection(Collection collection) async =>
+      _fallback.updateCollection(collection);
+
+  @override
+  Future<void> deleteCollection(String id) async =>
+      _fallback.deleteCollection(id);
+
+  @override
+  Future<void> addFileToCollection(String fileId, String collectionId) async {
+    if (RustFfi.isAvailable) {
+      RustFfi.collectionAddFile(collectionId, fileId);
+    }
+  }
+
+  @override
+  Future<void> removeFileFromCollection(String fileId, String collId) async =>
+      _fallback.removeFileFromCollection(fileId, collId);
 }
 
 class FfiStorageRepository implements StorageRepository {

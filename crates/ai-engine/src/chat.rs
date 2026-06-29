@@ -1,6 +1,5 @@
 //! AI Chat — conversational interface over the user's knowledge base.
 
-use crate::error::AiError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

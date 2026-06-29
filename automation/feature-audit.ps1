@@ -1,4 +1,4 @@
-# MemoryOS Feature Specification Auditor
+﻿# MemoryOS Feature Specification Auditor
 [CmdletBinding()]
 param()
 Write-Host "📋 Validating feature registry specifications..." -ForegroundColor Cyan

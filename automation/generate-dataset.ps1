@@ -1,4 +1,4 @@
-# MemoryOS Synthetic Dataset Generator
+﻿# MemoryOS Synthetic Dataset Generator
 [CmdletBinding()]
 param(
     [string]$Scale = "1K"

@@ -1,4 +1,4 @@
-# MemoryOS Performance Benchmarks
+﻿# MemoryOS Performance Benchmarks
 [CmdletBinding()]
 param()
 Write-Host "📊 Running Performance benchmarks & latencies verification..." -ForegroundColor Cyan

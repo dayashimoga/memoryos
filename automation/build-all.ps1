@@ -1,4 +1,4 @@
-# MemoryOS Cross-Platform Build Automation
+﻿# MemoryOS Cross-Platform Build Automation
 [CmdletBinding()]
 param()
 Write-Host "📦 Compiling cross-platform targets..." -ForegroundColor Cyan

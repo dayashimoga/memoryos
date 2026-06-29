@@ -1,4 +1,4 @@
-# MemoryOS Build Automation
+﻿# MemoryOS Build Automation
 [CmdletBinding()]
 param()
 Write-Host "🔨 Compiling MemoryOS Workspace (Rust & Flutter)..." -ForegroundColor Cyan

@@ -3,10 +3,9 @@
 use crate::error::AiError;
 use crate::types::{default_model_catalog, AiModel};
 use reqwest::Client;
-use sha2::{Digest, Sha256};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 pub struct ModelManager {
     models_dir: PathBuf,
@@ -81,9 +80,7 @@ impl ModelManager {
             )));
         }
 
-        let mut file = tokio::fs::File::create(&dest)
-            .await
-            .map_err(|e| AiError::Io(e))?;
+        let mut file = tokio::fs::File::create(&dest).await.map_err(AiError::Io)?;
 
         let mut stream = response.bytes_stream();
         use futures_util::StreamExt;

@@ -1,4 +1,4 @@
-# MemoryOS Test Automation
+﻿# MemoryOS Test Automation
 [CmdletBinding()]
 param()
 Write-Host "🧪 Running MemoryOS unit test suite..." -ForegroundColor Cyan

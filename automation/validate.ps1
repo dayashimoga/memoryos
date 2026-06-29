@@ -1,4 +1,4 @@
-# MemoryOS Subsystem Verification
+﻿# MemoryOS Subsystem Verification
 [CmdletBinding()]
 param()
 Write-Host "🚀 Validating offline subsystems..." -ForegroundColor Cyan

@@ -50,7 +50,7 @@ class ServiceLocator {
 
     // Repositories (stubs unless overridden, fallback internally checks availability)
     _fileRepo = fileRepo ?? const FfiFileRepository();
-    _collectionRepo = collectionRepo ?? const StubCollectionRepository();
+    _collectionRepo = collectionRepo ?? const FfiCollectionRepository();
     _aiRepo = aiRepo ?? const FfiAiRepository();
     _searchRepo = searchRepo ?? const FfiSearchRepository();
     _storageRepo = storageRepo ?? const FfiStorageRepository();

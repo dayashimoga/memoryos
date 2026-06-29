@@ -17,7 +17,61 @@ impl FtsSearcher {
     }
 
     pub fn search(&self, query: &str, limit: usize) -> Result<Vec<SearchResultItem>, SearchError> {
-        // Use LIKE for compatibility (FTS5 virtual table may not exist in test DB)
+        // Try FTS5 first for O(log n) indexed search
+        match self.search_fts5(query, limit) {
+            Ok(results) if !results.is_empty() => return Ok(results),
+            _ => {} // Fall through to LIKE search
+        }
+
+        // Fallback: LIKE search (works when FTS5 table not populated)
+        self.search_like(query, limit)
+    }
+
+    /// FTS5 indexed search using MATCH operator with BM25 ranking.
+    fn search_fts5(&self, query: &str, limit: usize) -> Result<Vec<SearchResultItem>, SearchError> {
+        let sql = r#"
+            SELECT f.id, f.filename, f.path,
+                   rank * -1.0 as score,
+                   SUBSTR(COALESCE(f.ocr_text, f.summary, ''), 1, 200) as snippet
+            FROM files_fts fts
+            JOIN files f ON f.id = fts.id
+            WHERE files_fts MATCH ?1
+            ORDER BY rank
+            LIMIT ?2
+        "#;
+
+        // Escape FTS5 query: wrap terms in double quotes for exact matching
+        let fts_query = query
+            .split_whitespace()
+            .map(|w| format!("\"{}\"", w.replace('"', "")))
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let mut stmt = self
+            .conn
+            .prepare(sql)
+            .map_err(|e| SearchError::Database(e.to_string()))?;
+
+        let results = stmt
+            .query_map(params![fts_query, limit as i64], |row| {
+                Ok(SearchResultItem {
+                    file_id: row.get::<_, String>(0)?,
+                    filename: row.get::<_, String>(1)?,
+                    path: row.get::<_, String>(2)?,
+                    score: row.get::<_, f64>(3)? as f32,
+                    snippet: row.get::<_, Option<String>>(4)?.unwrap_or_default(),
+                    match_type: MatchType::FullText,
+                })
+            })
+            .map_err(|e| SearchError::Database(e.to_string()))?
+            .filter_map(|r| r.ok())
+            .collect();
+
+        Ok(results)
+    }
+
+    /// LIKE-based fallback search (no index required).
+    fn search_like(&self, query: &str, limit: usize) -> Result<Vec<SearchResultItem>, SearchError> {
         let sql = r#"
             SELECT id, filename, path,
                    CASE
@@ -56,6 +110,22 @@ impl FtsSearcher {
             .collect();
 
         Ok(results)
+    }
+
+    /// Populate FTS5 index from existing files table data.
+    pub fn ensure_fts_populated(&self) -> Result<usize, SearchError> {
+        // Insert any files not yet in FTS index
+        let sql = r#"
+            INSERT OR IGNORE INTO files_fts(id, filename, ocr_text, summary)
+            SELECT id, filename, COALESCE(ocr_text, ''), COALESCE(summary, '')
+            FROM files
+            WHERE id NOT IN (SELECT id FROM files_fts)
+        "#;
+        let affected = self
+            .conn
+            .execute(sql, [])
+            .map_err(|e| SearchError::Database(e.to_string()))?;
+        Ok(affected)
     }
 
     /// Rebuild the FTS5 index from the files table.

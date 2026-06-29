@@ -8,8 +8,8 @@ use aes_gcm::{aead::Aead, Aes256Gcm, KeyInit, Nonce};
 use sha2::{Digest, Sha256};
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
-use tracing::{debug, error, info, warn};
+use std::path::Path;
+use tracing::info;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
@@ -444,21 +444,27 @@ pub fn perform_backup(
     hasher.update(key_phrase.as_bytes());
     let key_bytes = hasher.finalize();
 
-    // 3. Encrypt ZIP buffer with AES-256-GCM
+    // 3. Generate a random 12-byte nonce (CRITICAL: never reuse with same key)
     let cipher =
         Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| CoreError::Encryption(e.to_string()))?;
-    let nonce = Nonce::from_slice(b"unique_nonce"); // 12-byte initialization vector
+    let mut nonce_bytes = [0u8; 12];
+    getrandom::getrandom(&mut nonce_bytes)
+        .map_err(|e| CoreError::Encryption(format!("Failed to generate nonce: {}", e)))?;
+    let nonce = Nonce::from_slice(&nonce_bytes);
 
     let encrypted_data = cipher
         .encrypt(nonce, zip_buf.as_slice())
         .map_err(|e| CoreError::Encryption(e.to_string()))?;
 
-    // 4. Save to target backup file path
+    // 4. Save to target backup file: [nonce (12 bytes)] + [ciphertext]
     let output = Path::new(backup_path);
     if let Some(parent) = output.parent() {
         fs::create_dir_all(parent)?;
     }
-    fs::write(output, encrypted_data)?;
+    let mut final_output = Vec::with_capacity(12 + encrypted_data.len());
+    final_output.extend_from_slice(&nonce_bytes);
+    final_output.extend_from_slice(&encrypted_data);
+    fs::write(output, final_output)?;
     info!(
         backup_path,
         "Encrypted incremental backup written successfully"
@@ -481,13 +487,19 @@ pub fn restore_backup(
     hasher.update(key_phrase.as_bytes());
     let key_bytes = hasher.finalize();
 
-    // 2. Decrypt ciphertext
+    // 2. Extract nonce (first 12 bytes) and decrypt ciphertext
+    if encrypted_data.len() < 12 {
+        return Err(CoreError::Encryption(
+            "Backup file too short (missing nonce)".into(),
+        ));
+    }
     let cipher =
         Aes256Gcm::new_from_slice(&key_bytes).map_err(|e| CoreError::Encryption(e.to_string()))?;
-    let nonce = Nonce::from_slice(b"unique_nonce");
+    let nonce = Nonce::from_slice(&encrypted_data[..12]);
+    let ciphertext = &encrypted_data[12..];
 
     let zip_buf = cipher
-        .decrypt(nonce, encrypted_data.as_slice())
+        .decrypt(nonce, ciphertext)
         .map_err(|e| CoreError::Encryption(e.to_string()))?;
 
     // 3. Unpack ZIP buffer to target directory

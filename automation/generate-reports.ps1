@@ -1,4 +1,4 @@
-# MemoryOS Report Compiler
+﻿# MemoryOS Report Compiler
 [CmdletBinding()]
 param()
 Write-Host "📊 Generating system audit reports..." -ForegroundColor Cyan

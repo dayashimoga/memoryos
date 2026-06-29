@@ -1,4 +1,4 @@
-# MemoryOS Quality Gates Enforcement
+﻿# MemoryOS Quality Gates Enforcement
 [CmdletBinding()]
 param()
 Write-Host "🛡️ Evaluating MemoryOS release quality gates..." -ForegroundColor Cyan
