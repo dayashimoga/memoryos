@@ -12,8 +12,10 @@ import 'package:memoryos/features/models/pages/models_page.dart';
 import 'package:memoryos/features/duplicates/pages/duplicates_page.dart';
 import 'package:memoryos/features/learning/pages/learning_page.dart';
 import 'package:memoryos/features/shell/shell_page.dart';
+import 'package:memoryos/features/inbox/pages/inbox_page.dart';
+import 'package:memoryos/features/galaxy/pages/galaxy_page.dart';
 
-/// Application router configuration using GoRouter.
+/// Application router — GoRouter ShellRoute with all feature routes.
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',
@@ -66,6 +68,14 @@ class AppRouter {
           GoRoute(
             path: '/settings',
             builder: (context, state) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: '/inbox',
+            builder: (context, state) => const SmartInboxPage(),
+          ),
+          GoRoute(
+            path: '/galaxy',
+            builder: (context, state) => const MemoryGalaxyPage(),
           ),
           GoRoute(
             path: '/file/:id',

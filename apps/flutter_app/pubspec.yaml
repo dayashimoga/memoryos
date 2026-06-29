@@ -1,6 +1,6 @@
 name: memoryos
 description: MemoryOS — Offline AI-Powered Personal Memory Operating System
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ">=3.2.0 <4.0.0"
@@ -32,12 +32,31 @@ dependencies:
   file_picker: ^6.1.1
   share_plus: ^7.2.1
   image_picker: ^1.0.7
+  open_filex: ^4.3.4
 
   # UI Components
   flutter_animate: ^4.5.0
   shimmer: ^3.0.0
-  cached_network_image: ^3.3.1
   lottie: ^3.0.0
+  
+  # Dynamic Material You color extraction
+  dynamic_color: ^1.7.0
+  
+  # Glass/blur effects
+  glassmorphism: ^3.0.0
+  
+  # Image handling
+  cached_network_image: ^3.3.1
+  extended_image: ^8.3.0
+  
+  # Drag & Drop
+  super_drag_and_drop: ^0.8.7
+  
+  # Keyboard shortcuts
+  flutter_keyboard_visibility: ^5.4.1
+  
+  # Virtual scrolling / lazy list
+  flutter_staggered_grid_view: ^0.7.0
 
   # Local auth (biometrics for Vault)
   local_auth: ^2.1.8
@@ -71,6 +90,9 @@ dependencies:
 
   # HTTP (model downloads)
   dio: ^5.4.0
+  
+  # Storage info
+  disk_space_plus: ^3.0.1
 
 dev_dependencies:
   flutter_test:

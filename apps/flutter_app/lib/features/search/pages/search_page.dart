@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memoryos/core/theme/app_theme.dart';
+import 'package:memoryos/core/widgets/shared_widgets.dart';
 
-/// Natural language search page.
+/// Universal command center search page.
 class SearchPage extends StatefulWidget {
   final String? initialQuery;
 
@@ -12,219 +15,352 @@ class SearchPage extends StatefulWidget {
   State<SearchPage> createState() => _SearchPageState();
 }
 
-class _SearchPageState extends State<SearchPage> {
+class _SearchPageState extends State<SearchPage>
+    with SingleTickerProviderStateMixin {
   late final TextEditingController _controller;
-  String _query = '';
-  bool _isSearching = false;
-  String _selectedFilter = 'All';
+  late final FocusNode _focusNode;
+  late TabController _tabController;
 
-  static const _filterChips = ['All', 'Images', 'Documents', 'Videos', 'Audio', 'Screenshots'];
-  static const _suggestedQueries = [
-    'Find AWS notes',
-    'Show Kubernetes screenshots',
-    'Invoice from last month',
-    'Meeting recordings',
-    'Chess opening theory',
-    'Cloud security vulnerabilities',
+  String _query = '';
+  String _activeFilter = 'All';
+  bool _showResults = false;
+
+  static const _filters = [
+    'All', 'Images', 'Documents', 'Videos', 'Audio', 'Archives', 'Screenshots',
+  ];
+
+  static const _suggestions = [
+    ('Find the AWS architecture screenshot I saved last year', Icons.screenshot_monitor_rounded),
+    ('Show all Kubernetes-related documents', Icons.cloud_rounded),
+    ('Invoices from 2024', Icons.receipt_long_rounded),
+    ('Meeting recordings last month', Icons.mic_rounded),
+    ('Chess opening theory notes', Icons.sports_esports_rounded),
+    ('Videos longer than 10 minutes', Icons.video_library_rounded),
   ];
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialQuery ?? '');
+    _focusNode = FocusNode();
+    _tabController = TabController(length: _filters.length, vsync: this);
     _query = widget.initialQuery ?? '';
-    if (_query.isNotEmpty) _performSearch(_query);
+    _showResults = _query.isNotEmpty;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialQuery == null) _focusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
-  void _performSearch(String query) {
+  void _onSearch(String q) {
+    final trimmed = q.trim();
     setState(() {
-      _query = query;
-      _isSearching = query.isNotEmpty;
+      _query = trimmed;
+      _showResults = trimmed.isNotEmpty;
     });
-    // TODO: dispatch SearchBloc event
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Hero(
-          tag: 'search_bar',
-          child: Material(
-            color: Colors.transparent,
-            child: TextField(
-              controller: _controller,
-              autofocus: widget.initialQuery == null,
-              decoration: InputDecoration(
-                hintText: 'Search your memories...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _controller.clear();
-                          setState(() => _query = '');
-                        },
-                      )
-                    : null,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Search header ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Hero(
+                tag: 'search_bar',
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? DesignTokens.darkCard
+                          : DesignTokens.lightSurface,
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusXl),
+                      border: Border.all(
+                        color: isDark
+                            ? DesignTokens.darkBorder
+                            : DesignTokens.lightBorder,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_rounded),
+                          onPressed: () => context.pop(),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            maxLines: 1,
+                            textInputAction: TextInputAction.search,
+                            keyboardType: TextInputType.text,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                            decoration: InputDecoration(
+                              hintText: 'Search memories...',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? const Color(0xFF475569)
+                                    : const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            onChanged: (v) => Future.delayed(
+                              const Duration(milliseconds: 280),
+                              () {
+                                if (mounted &&
+                                    _controller.text == v) {
+                                  _onSearch(v);
+                                }
+                              },
+                            ),
+                            onSubmitted: _onSearch,
+                          ),
+                        ),
+                        if (_controller.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear_rounded),
+                            onPressed: () {
+                              _controller.clear();
+                              setState(() {
+                                _query = '';
+                                _showResults = false;
+                              });
+                              _focusNode.requestFocus();
+                            },
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.mic_outlined),
+                            onPressed: () {},
+                            tooltip: 'Voice search',
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              onChanged: (val) => Future.delayed(
-                const Duration(milliseconds: 300),
-                () => _performSearch(val),
-              ),
-              onSubmitted: _performSearch,
             ),
-          ),
+
+            // ── Filter tabs ────────────────────────────────────
+            if (_showResults) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 36,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _filters.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final active = _activeFilter == _filters[i];
+                    return GestureDetector(
+                      onTap: () =>
+                          setState(() => _activeFilter = _filters[i]),
+                      child: AnimatedContainer(
+                        duration: DesignTokens.durationFast,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: active
+                              ? DesignTokens.brand
+                              : (isDark
+                                  ? DesignTokens.darkCard
+                                  : DesignTokens.lightSurface),
+                          borderRadius:
+                              BorderRadius.circular(DesignTokens.radiusFull),
+                          border: Border.all(
+                            color: active
+                                ? DesignTokens.brand
+                                : (isDark
+                                    ? DesignTokens.darkBorder
+                                    : DesignTokens.lightBorder),
+                          ),
+                        ),
+                        child: Text(
+                          _filters[i],
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 12,
+                            fontWeight: active
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                            color: active
+                                ? Colors.white
+                                : (isDark
+                                    ? const Color(0xFF94A3B8)
+                                    : const Color(0xFF64748B)),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 12),
+
+            // ── Body ───────────────────────────────────────────
+            Expanded(
+              child: _showResults
+                  ? _ResultsList(query: _query, filter: _activeFilter)
+                  : _SuggestionsView(
+                      suggestions: _suggestions,
+                      onSelect: (q) {
+                        _controller.text = q;
+                        _onSearch(q);
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
-      body: _query.isEmpty ? _buildSuggestionsView() : _buildResultsView(),
     );
   }
+}
 
-  Widget _buildSuggestionsView() {
+// ─── Suggestions ──────────────────────────────────────────────────────────────
+
+class _SuggestionsView extends StatelessWidget {
+  final List<(String, IconData)> suggestions;
+  final ValueChanged<String> onSelect;
+
+  const _SuggestionsView({required this.suggestions, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
-        Text(
-          'Try asking...',
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.bolt_rounded, size: 16, color: DesignTokens.brand),
+              const SizedBox(width: 6),
+              Text('Try asking',
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelLarge
+                      ?.copyWith(color: DesignTokens.brand)),
+            ],
+          ),
+        ),
+        ...suggestions.asMap().entries.map(
+              (e) => _SuggestionTile(
+                suggestion: e.value,
+                index: e.key,
+                onTap: () => onSelect(e.value.$1),
               ),
-        ),
-        const SizedBox(height: 12),
-        ..._suggestedQueries.asMap().entries.map((e) => ListTile(
-              leading: const Icon(Icons.history, size: 20),
-              title: Text(e.value),
-              onTap: () {
-                _controller.text = e.value;
-                _performSearch(e.value);
-              },
-            ).animate().fadeIn(delay: (e.key * 50).ms)),
-      ],
-    );
-  }
-
-  Widget _buildResultsView() {
-    return Column(
-      children: [
-        // Filter chips
-        SizedBox(
-          height: 48,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            children: _filterChips
-                .map((f) => Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: FilterChip(
-                        label: Text(f),
-                        selected: _selectedFilter == f,
-                        onSelected: (_) => setState(() => _selectedFilter = f),
-                      ),
-                    ))
-                .toList(),
-          ),
-        ),
-
-        // Results list
-        Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: 15,
-            itemBuilder: (context, index) => _SearchResultCard(
-              index: index,
-              query: _query,
-            ).animate().fadeIn(delay: (index * 30).ms).slideY(begin: 0.05, end: 0),
-          ),
-        ),
+            ),
       ],
     );
   }
 }
 
-class _SearchResultCard extends StatelessWidget {
+class _SuggestionTile extends StatelessWidget {
+  final (String, IconData) suggestion;
   final int index;
-  final String query;
+  final VoidCallback onTap;
 
-  const _SearchResultCard({required this.index, required this.query});
+  const _SuggestionTile({required this.suggestion, required this.index, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
       child: InkWell(
-        onTap: () {},
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
+            borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+            border: Border.all(
+              color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+            ),
+          ),
           child: Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: colorScheme.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.article_outlined, color: colorScheme.primary),
-              ),
+              Icon(suggestion.$2, size: 18, color: DesignTokens.brand),
               const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Result file ${index + 1}.pdf',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '...contains information about "$query"...',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Chip(
-                          label: const Text('Document'),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          padding: EdgeInsets.zero,
-                          labelStyle: Theme.of(context).textTheme.labelSmall,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '3 days ago',
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ],
+                child: Text(
+                  suggestion.$1,
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
-              Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant, size: 16),
+              const Icon(Icons.north_west_rounded,
+                  size: 14, color: Color(0xFF94A3B8)),
             ],
           ),
         ),
-      ),
+      )
+          .animate()
+          .fadeIn(delay: (index * 40).ms, duration: 200.ms),
+    );
+  }
+}
+
+// ─── Results ──────────────────────────────────────────────────────────────────
+
+class _ResultsList extends StatelessWidget {
+  final String query;
+  final String filter;
+
+  const _ResultsList({required this.query, required this.filter});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Row(
+            children: [
+              Text(
+                'Results for "$query"',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const Spacer(),
+              Text(
+                '0 found',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: DesignTokens.brand),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: EmptyStateWidget(
+            icon: Icons.search_off_rounded,
+            title: 'No files indexed yet',
+            subtitle: 'Import and index files to enable search. Results will appear here.',
+            actionLabel: 'Import Files',
+            onAction: () => context.go('/'),
+          ),
+        ),
+      ],
     );
   }
 }

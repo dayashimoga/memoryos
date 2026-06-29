@@ -20,6 +20,7 @@ rust-version = "1.75"
 # Async runtime
 tokio = { version = "1.36", features = ["full"] }
 tokio-stream = "0.1"
+futures-util = "0.3"
 
 # Error handling
 anyhow = "1.0"
@@ -40,6 +41,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 sha2 = "0.10"
 aes-gcm = "0.10"
 argon2 = "0.5"
+
+# Random (crypto-safe)
+getrandom = "0.2"
+
+# File system monitoring
+notify = { version = "6.1", features = ["serde"] }
+
+# Parallel processing
+rayon = "1.8"
+crossbeam-channel = "0.5"
 
 # HTTP (for model download)
 reqwest = { version = "0.11", features = ["stream", "json"] }

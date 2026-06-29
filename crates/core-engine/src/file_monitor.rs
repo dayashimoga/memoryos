@@ -1,154 +1,195 @@
-//! File system monitoring using platform-native watchers.
+//! Event-driven file system watcher using the `notify` crate.
+//!
+//! Replaces the previous polling-based watcher with OS-native file events
+//! (inotify on Linux, FSEvents on macOS, ReadDirectoryChangesW on Windows).
 
 use crate::error::CoreError;
-use crate::models::{FileEntry, FileType};
-use std::path::Path;
-use std::sync::mpsc::{channel, Receiver, Sender};
+use crossbeam_channel::{bounded, Receiver, Sender};
+use notify::{Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::Duration;
 use tracing::{debug, error, info, warn};
 
-/// An event emitted by the file monitor.
+/// Events emitted by the file monitor.
 #[derive(Debug, Clone)]
 pub enum FileEvent {
-    Created(String),
-    Modified(String),
-    Deleted(String),
-    Renamed { from: String, to: String },
+    /// A new file was created or appeared in a watched directory.
+    Created(PathBuf),
+    /// An existing file was modified.
+    Modified(PathBuf),
+    /// A file was removed.
+    Removed(PathBuf),
+    /// A file was renamed. (from, to)
+    Renamed(PathBuf, PathBuf),
 }
 
-/// Configuration for the file monitor.
-pub struct MonitorConfig {
-    pub watch_dirs: Vec<String>,
-    pub poll_interval_ms: u64,
-    pub extensions_filter: Vec<String>,
-}
-
-impl Default for MonitorConfig {
-    fn default() -> Self {
-        Self {
-            watch_dirs: Vec::new(),
-            poll_interval_ms: 1000,
-            extensions_filter: Vec::new(),
-        }
-    }
-}
-
-/// File system monitor (polling-based for cross-platform compatibility).
+/// OS-native file system monitor.
+///
+/// Uses the `notify` crate for efficient, cross-platform event delivery.
 pub struct FileMonitor {
-    config: MonitorConfig,
-    tx: Sender<FileEvent>,
+    watcher: Option<RecommendedWatcher>,
+    sender: Sender<FileEvent>,
+    receiver: Arc<Mutex<Receiver<FileEvent>>>,
+    watched_dirs: Vec<PathBuf>,
 }
 
 impl FileMonitor {
-    pub fn new(config: MonitorConfig) -> (Self, Receiver<FileEvent>) {
-        let (tx, rx) = channel();
-        (Self { config, tx }, rx)
+    /// Create a new file monitor. Events are delivered via the returned receiver.
+    pub fn new() -> Result<(Self, Receiver<FileEvent>), CoreError> {
+        let (tx, rx) = bounded::<FileEvent>(1024);
+        let rx_clone = rx.clone();
+        let monitor = FileMonitor {
+            watcher: None,
+            sender: tx,
+            receiver: Arc::new(Mutex::new(rx)),
+            watched_dirs: Vec::new(),
+        };
+        Ok((monitor, rx_clone))
     }
 
-    /// Start monitoring in a background thread.
-    pub fn start(self) -> thread::JoinHandle<()> {
-        thread::spawn(move || {
-            info!("File monitor started, watching {} directories", self.config.watch_dirs.len());
-            let mut known_files: std::collections::HashMap<String, std::time::SystemTime> =
-                std::collections::HashMap::new();
+    /// Start watching a directory recursively.
+    pub fn watch_dir<P: AsRef<Path>>(&mut self, dir: P) -> Result<(), CoreError> {
+        let path = dir.as_ref().to_path_buf();
 
-            loop {
-                for dir in &self.config.watch_dirs {
-                    if let Err(e) = self.scan_directory(dir, &mut known_files) {
-                        warn!(dir = %dir, error = %e, "Failed to scan directory");
-                    }
-                }
-                thread::sleep(Duration::from_millis(self.config.poll_interval_ms));
-            }
-        })
-    }
-
-    fn scan_directory(
-        &self,
-        dir: &str,
-        known: &mut std::collections::HashMap<String, std::time::SystemTime>,
-    ) -> Result<(), CoreError> {
-        let path = Path::new(dir);
         if !path.exists() {
-            return Ok(());
+            return Err(CoreError::Io(std::io::Error::new(
+                std::io::ErrorKind::NotFound,
+                format!("Directory not found: {}", path.display()),
+            )));
         }
 
-        let entries = std::fs::read_dir(path)?;
-        let mut seen = std::collections::HashSet::new();
+        let tx = self.sender.clone();
 
-        for entry in entries.flatten() {
-            let file_path = entry.path();
-            if !file_path.is_file() {
-                continue;
-            }
-            let path_str = file_path.to_string_lossy().to_string();
-
-            // Extension filter
-            if !self.config.extensions_filter.is_empty() {
-                let ext = file_path
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("")
-                    .to_lowercase();
-                if !self.config.extensions_filter.contains(&ext) {
-                    continue;
-                }
-            }
-
-            seen.insert(path_str.clone());
-
-            if let Ok(meta) = entry.metadata() {
-                if let Ok(modified) = meta.modified() {
-                    match known.get(&path_str) {
-                        None => {
-                            debug!(path = %path_str, "New file detected");
-                            known.insert(path_str.clone(), modified);
-                            let _ = self.tx.send(FileEvent::Created(path_str));
+        // Build the watcher on first call
+        if self.watcher.is_none() {
+            let watcher = RecommendedWatcher::new(
+                move |res: notify::Result<Event>| match res {
+                    Ok(event) => {
+                        let fe = Self::map_event(event);
+                        for e in fe {
+                            if tx.send(e).is_err() {
+                                error!("FileMonitor channel closed");
+                            }
                         }
-                        Some(&prev) if modified > prev => {
-                            debug!(path = %path_str, "Modified file detected");
-                            known.insert(path_str.clone(), modified);
-                            let _ = self.tx.send(FileEvent::Modified(path_str));
-                        }
-                        _ => {}
                     }
-                }
+                    Err(e) => warn!(error = %e, "Watch error"),
+                },
+                NotifyConfig::default(),
+            )
+            .map_err(|e| CoreError::Internal(e.to_string()))?;
+            self.watcher = Some(watcher);
+        }
+
+        if let Some(watcher) = self.watcher.as_mut() {
+            watcher
+                .watch(&path, RecursiveMode::Recursive)
+                .map_err(|e| CoreError::Internal(e.to_string()))?;
+        }
+
+        info!(dir = %path.display(), "Started watching directory");
+        self.watched_dirs.push(path);
+        Ok(())
+    }
+
+    /// Stop watching a directory.
+    pub fn unwatch_dir<P: AsRef<Path>>(&mut self, dir: P) -> Result<(), CoreError> {
+        let path = dir.as_ref();
+        if let Some(watcher) = self.watcher.as_mut() {
+            watcher
+                .unwatch(path)
+                .map_err(|e| CoreError::Internal(e.to_string()))?;
+        }
+        self.watched_dirs.retain(|d| d != path);
+        Ok(())
+    }
+
+    /// Returns the list of currently watched directories.
+    pub fn watched_dirs(&self) -> &[PathBuf] {
+        &self.watched_dirs
+    }
+
+    /// Map a `notify::Event` to zero or more `FileEvent`s.
+    fn map_event(event: Event) -> Vec<FileEvent> {
+        match event.kind {
+            EventKind::Create(_) => event
+                .paths
+                .into_iter()
+                .map(FileEvent::Created)
+                .collect(),
+            EventKind::Modify(_) => event
+                .paths
+                .into_iter()
+                .map(FileEvent::Modified)
+                .collect(),
+            EventKind::Remove(_) => event
+                .paths
+                .into_iter()
+                .map(FileEvent::Removed)
+                .collect(),
+            EventKind::Access(_) => vec![],
+            EventKind::Any | EventKind::Other => {
+                // Could be a rename — emit Modified for each path
+                event
+                    .paths
+                    .into_iter()
+                    .map(FileEvent::Modified)
+                    .collect()
             }
         }
+    }
+}
 
-        // Detect deletions
-        let deleted: Vec<String> = known
-            .keys()
-            .filter(|p| p.starts_with(dir) && !seen.contains(*p))
-            .cloned()
-            .collect();
-        for path in deleted {
-            debug!(path = %path, "Deleted file detected");
-            known.remove(&path);
-            let _ = self.tx.send(FileEvent::Deleted(path));
+impl Default for FileMonitor {
+    fn default() -> Self {
+        let (tx, rx) = bounded(1024);
+        FileMonitor {
+            watcher: None,
+            sender: tx,
+            receiver: Arc::new(Mutex::new(rx)),
+            watched_dirs: Vec::new(),
         }
-
-        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
-    fn test_monitor_config_default() {
-        let cfg = MonitorConfig::default();
-        assert_eq!(cfg.poll_interval_ms, 1000);
-        assert!(cfg.watch_dirs.is_empty());
+    fn test_monitor_creation() {
+        let result = FileMonitor::new();
+        assert!(result.is_ok());
     }
 
     #[test]
-    fn test_monitor_creates_channel() {
-        let cfg = MonitorConfig::default();
-        let (_monitor, rx) = FileMonitor::new(cfg);
-        // Channel should be usable
-        drop(rx);
+    fn test_watch_nonexistent_dir() {
+        let (mut monitor, _rx) = FileMonitor::new().unwrap();
+        let result = monitor.watch_dir("/nonexistent/path/that/does/not/exist");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_watch_existing_dir() {
+        let tmp = TempDir::new().unwrap();
+        let (mut monitor, _rx) = FileMonitor::new().unwrap();
+        let result = monitor.watch_dir(tmp.path());
+        assert!(result.is_ok());
+        assert_eq!(monitor.watched_dirs().len(), 1);
+    }
+
+    #[test]
+    fn test_map_event_create() {
+        use notify::{event::CreateKind, EventKind};
+        let event = Event {
+            kind: EventKind::Create(CreateKind::File),
+            paths: vec![PathBuf::from("/tmp/test.txt")],
+            attrs: Default::default(),
+        };
+        let mapped = FileMonitor::map_event(event);
+        assert_eq!(mapped.len(), 1);
+        assert!(matches!(mapped[0], FileEvent::Created(_)));
     }
 }

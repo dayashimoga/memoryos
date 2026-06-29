@@ -119,6 +119,28 @@ jobs:
         working-directory: apps/flutter_app
         run: flutter test --coverage
 
+      - name: Flutter coverage gate (≥ 90%)
+        working-directory: apps/flutter_app
+        run: |
+          pip install lcov-cobertura 2>/dev/null || true
+          LINES_HIT=$(grep -oP 'LH:\K\d+' coverage/lcov.info | awk '{s+=$1}END{print s}')
+          LINES_FOUND=$(grep -oP 'LF:\K\d+' coverage/lcov.info | awk '{s+=$1}END{print s}')
+          if [ "$LINES_FOUND" -gt 0 ]; then
+            COVERAGE=$(echo "scale=2; $LINES_HIT * 100 / $LINES_FOUND" | bc)
+            echo "Flutter Coverage: ${COVERAGE}%"
+            python3 -c "
+          cov = float('${COVERAGE}')
+          print(f'Coverage: {cov:.1f}%')
+          import sys
+          if cov < 90.0:
+              print(f'FAIL: Coverage {cov:.1f}% is below 90% threshold')
+              sys.exit(1)
+          print(f'PASS: Coverage {cov:.1f}% meets threshold')
+          "
+          else
+            echo "No coverage data found — skipping gate"
+          fi
+
       - name: Upload Flutter coverage
         uses: codecov/codecov-action@v4
         with:
