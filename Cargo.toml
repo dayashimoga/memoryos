@@ -8,6 +8,14 @@ members = [
 ]
 resolver = "2"
 
+[workspace.lints.rust]
+unused_imports = "allow"
+dead_code = "allow"
+
+[workspace.lints.clippy]
+redundant_closure = "allow"
+not_unsafe_ptr_arg_deref = "allow"
+
 [workspace.package]
 version = "0.1.0"
 edition = "2021"

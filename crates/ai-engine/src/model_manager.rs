@@ -7,7 +7,6 @@ use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, warn};
-use futures_util::StreamExt;
 
 pub struct ModelManager {
     models_dir: PathBuf,

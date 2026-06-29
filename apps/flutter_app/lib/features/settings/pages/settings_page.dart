@@ -72,8 +72,12 @@ class SettingsPage extends StatelessWidget {
           ]),
 
           _Section('About', [
-            _InfoTile(icon: Icons.info_rounded, label: 'Version', value: 'v1.2.0'),
-            _InfoTile(icon: Icons.memory_rounded, label: 'Engine', value: 'Rust core-engine'),
+            _InfoTile(
+                icon: Icons.info_rounded, label: 'Version', value: 'v1.2.0'),
+            _InfoTile(
+                icon: Icons.memory_rounded,
+                label: 'Engine',
+                value: 'Rust core-engine'),
             _NavTile(
               icon: Icons.article_rounded,
               label: 'Acknowledgements',
@@ -102,11 +106,18 @@ class _ProfileCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [DesignTokens.brand.withOpacity(0.18), DesignTokens.accent.withOpacity(0.1)]
-              : [DesignTokens.brand.withOpacity(0.07), DesignTokens.accent.withOpacity(0.04)],
+              ? [
+                  DesignTokens.brand.withOpacity(0.18),
+                  DesignTokens.accent.withOpacity(0.1)
+                ]
+              : [
+                  DesignTokens.brand.withOpacity(0.07),
+                  DesignTokens.accent.withOpacity(0.04)
+                ],
         ),
         borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
-        border: Border.all(color: DesignTokens.brand.withOpacity(isDark ? 0.2 : 0.12)),
+        border: Border.all(
+            color: DesignTokens.brand.withOpacity(isDark ? 0.2 : 0.12)),
       ),
       child: Row(
         children: [
@@ -124,7 +135,8 @@ class _ProfileCard extends StatelessWidget {
                     offset: const Offset(0, 4))
               ],
             ),
-            child: const Icon(Icons.person_rounded, color: Colors.white, size: 26),
+            child:
+                const Icon(Icons.person_rounded, color: Colors.white, size: 26),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -198,7 +210,9 @@ class _ThemeSetting extends StatelessWidget {
             color: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
             borderRadius: BorderRadius.circular(DesignTokens.radiusLg),
             border: Border.all(
-                color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                color: isDark
+                    ? DesignTokens.darkBorder
+                    : DesignTokens.lightBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,9 +224,11 @@ class _ThemeSetting extends StatelessWidget {
                     height: 36,
                     decoration: BoxDecoration(
                       color: DesignTokens.brand.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusMd),
                     ),
-                    child: const Icon(Icons.palette_rounded, color: DesignTokens.brand, size: 18),
+                    child: const Icon(Icons.palette_rounded,
+                        color: DesignTokens.brand, size: 18),
                   ),
                   const SizedBox(width: 12),
                   Column(
@@ -257,10 +273,8 @@ class _ThemeSetting extends StatelessWidget {
                 ],
                 style: ButtonStyle(
                   textStyle: WidgetStatePropertyAll(
-                    Theme.of(context)
-                        .textTheme
-                        .labelMedium
-                        ?.copyWith(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                    Theme.of(context).textTheme.labelMedium?.copyWith(
+                        fontFamily: 'Inter', fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
@@ -285,7 +299,8 @@ class _AiStatusTile extends StatelessWidget {
               : Icons.error_outline_rounded,
           label: 'AI Model',
           value: state.modelLoaded ? 'Model active' : 'No model loaded',
-          iconColor: state.modelLoaded ? DesignTokens.success : DesignTokens.warning,
+          iconColor:
+              state.modelLoaded ? DesignTokens.success : DesignTokens.warning,
         );
       },
     );
@@ -302,7 +317,8 @@ class _StorageStatsTile extends StatelessWidget {
         return _InfoTile(
           icon: Icons.inventory_2_rounded,
           label: 'Indexed Files',
-          value: '${state.stats.totalFiles} files · ${state.stats.formattedTotal}',
+          value:
+              '${state.stats.totalFiles} files · ${state.stats.formattedTotal}',
         );
       },
     );
@@ -349,7 +365,9 @@ class _NavTile extends StatelessWidget {
         ),
         title: Text(label,
             style: const TextStyle(
-                fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                fontSize: 14)),
         subtitle: subtitle != null
             ? Text(subtitle!,
                 style: const TextStyle(fontFamily: 'Inter', fontSize: 12))
@@ -372,7 +390,8 @@ class _NavTile extends StatelessWidget {
                         color: DesignTokens.success)),
               ),
             const SizedBox(width: 8),
-            const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF94A3B8)),
+            const Icon(Icons.chevron_right_rounded,
+                size: 18, color: Color(0xFF94A3B8)),
           ],
         ),
         onTap: onTap,
@@ -420,7 +439,10 @@ class _SwitchTile extends StatelessWidget {
           child: Icon(icon, color: DesignTokens.brand, size: 18),
         ),
         title: Text(label,
-            style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
+            style: const TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+                fontSize: 14)),
         subtitle: Text(subtitle,
             style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
         value: value,
@@ -477,7 +499,9 @@ class _InfoTile extends StatelessWidget {
           Expanded(
             child: Text(label,
                 style: const TextStyle(
-                    fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14)),
           ),
           Text(value,
               style: const TextStyle(

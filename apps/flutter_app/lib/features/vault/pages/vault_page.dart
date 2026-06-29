@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
@@ -60,12 +58,11 @@ class _LockedVaultView extends StatelessWidget {
   final bool authenticating;
   final VoidCallback onUnlock;
 
-  const _LockedVaultView({required this.authenticating, required this.onUnlock});
+  const _LockedVaultView(
+      {required this.authenticating, required this.onUnlock});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -79,7 +76,8 @@ class _LockedVaultView extends StatelessWidget {
                   tween: Tween(begin: 0.0, end: 1.0),
                   duration: const Duration(milliseconds: 600),
                   curve: Curves.elasticOut,
-                  builder: (_, v, child) => Transform.scale(scale: v, child: child),
+                  builder: (_, v, child) =>
+                      Transform.scale(scale: v, child: child),
                   child: Container(
                     width: 96,
                     height: 96,
@@ -137,9 +135,13 @@ class _LockedVaultView extends StatelessWidget {
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
                   children: [
-                    _SecurityBadge(label: 'AES-256-GCM', icon: Icons.enhanced_encryption_rounded),
-                    _SecurityBadge(label: 'Argon2id KDF', icon: Icons.key_rounded),
-                    _SecurityBadge(label: '100% Offline', icon: Icons.wifi_off_rounded),
+                    _SecurityBadge(
+                        label: 'AES-256-GCM',
+                        icon: Icons.enhanced_encryption_rounded),
+                    _SecurityBadge(
+                        label: 'Argon2id KDF', icon: Icons.key_rounded),
+                    _SecurityBadge(
+                        label: '100% Offline', icon: Icons.wifi_off_rounded),
                   ],
                 ),
               ],
@@ -223,7 +225,8 @@ class _UnlockedVaultView extends StatelessWidget {
       body: EmptyStateWidget(
         icon: Icons.shield_rounded,
         title: 'Your vault is empty',
-        subtitle: 'Add sensitive files to encrypt them with AES-256-GCM.\nThey will only be accessible after authentication.',
+        subtitle:
+            'Add sensitive files to encrypt them with AES-256-GCM.\nThey will only be accessible after authentication.',
         actionLabel: 'Add Files to Vault',
         onAction: () {},
         iconColor: DesignTokens.success,

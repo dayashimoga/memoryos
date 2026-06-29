@@ -32,8 +32,26 @@ class _SearchViewState extends State<_SearchView> {
   late final TextEditingController _controller;
   late final FocusNode _focus;
   String _activeFilter = 'All';
+  String? _selectedColor;
 
-  static const _filters = ['All', 'Images', 'Documents', 'Videos', 'Audio', 'Archives', 'Screenshots'];
+  static const _filters = [
+    'All',
+    'Images',
+    'Documents',
+    'Videos',
+    'Audio',
+    'Archives',
+    'Screenshots'
+  ];
+  static const _colorFilters = [
+    ('#EF4444', 'Red'),
+    ('#3B82F6', 'Blue'),
+    ('#10B981', 'Green'),
+    ('#F59E0B', 'Yellow'),
+    ('#8B5CF6', 'Purple'),
+    ('#EC4899', 'Pink'),
+    ('#06B6D4', 'Cyan'),
+  ];
 
   @override
   void initState() {
@@ -43,7 +61,9 @@ class _SearchViewState extends State<_SearchView> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focus.requestFocus();
       if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
-        context.read<SearchBloc>().add(SearchQueryChanged(widget.initialQuery!));
+        context
+            .read<SearchBloc>()
+            .add(SearchQueryChanged(widget.initialQuery!));
       } else {
         context.read<SearchBloc>().add(SearchHistoryRequested());
       }
@@ -74,10 +94,15 @@ class _SearchViewState extends State<_SearchView> {
                   color: Colors.transparent,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
-                      borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
+                      color: isDark
+                          ? DesignTokens.darkCard
+                          : DesignTokens.lightSurface,
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusXl),
                       border: Border.all(
-                          color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                          color: isDark
+                              ? DesignTokens.darkBorder
+                              : DesignTokens.lightBorder),
                     ),
                     child: Row(
                       children: [
@@ -100,7 +125,9 @@ class _SearchViewState extends State<_SearchView> {
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
                               hintStyle: TextStyle(
-                                color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+                                color: isDark
+                                    ? const Color(0xFF475569)
+                                    : const Color(0xFF94A3B8),
                               ),
                             ),
                             onChanged: (v) => context
@@ -116,7 +143,9 @@ class _SearchViewState extends State<_SearchView> {
                                 icon: const Icon(Icons.clear_rounded),
                                 onPressed: () {
                                   _controller.clear();
-                                  context.read<SearchBloc>().add(SearchCleared());
+                                  context
+                                      .read<SearchBloc>()
+                                      .add(SearchCleared());
                                   _focus.requestFocus();
                                 },
                               );
@@ -162,19 +191,29 @@ class _SearchViewState extends State<_SearchView> {
                           onTap: () {
                             setState(() => _activeFilter = _filters[i]);
                             context.read<SearchBloc>().add(SearchFilterChanged(
-                              typeFilter: _filters[i] == 'All' ? null : _filters[i].toLowerCase(),
-                            ));
+                                  typeFilter: _filters[i] == 'All'
+                                      ? null
+                                      : _filters[i].toLowerCase(),
+                                ));
                           },
                           child: AnimatedContainer(
                             duration: DesignTokens.durationFast,
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 6),
                             decoration: BoxDecoration(
                               color: active
                                   ? DesignTokens.brand
-                                  : (isDark ? DesignTokens.darkCard : DesignTokens.lightSurface),
-                              borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                                  : (isDark
+                                      ? DesignTokens.darkCard
+                                      : DesignTokens.lightSurface),
+                              borderRadius: BorderRadius.circular(
+                                  DesignTokens.radiusFull),
                               border: Border.all(
-                                color: active ? DesignTokens.brand : (isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                                color: active
+                                    ? DesignTokens.brand
+                                    : (isDark
+                                        ? DesignTokens.darkBorder
+                                        : DesignTokens.lightBorder),
                               ),
                             ),
                             child: Text(
@@ -182,8 +221,11 @@ class _SearchViewState extends State<_SearchView> {
                               style: TextStyle(
                                 fontFamily: 'Inter',
                                 fontSize: 12,
-                                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                                color: active ? Colors.white : const Color(0xFF64748B),
+                                fontWeight:
+                                    active ? FontWeight.w700 : FontWeight.w500,
+                                color: active
+                                    ? Colors.white
+                                    : const Color(0xFF64748B),
                               ),
                             ),
                           ),
@@ -193,6 +235,74 @@ class _SearchViewState extends State<_SearchView> {
                   ),
                 );
               },
+            ),
+
+            // ── Color Filters ──────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 4),
+              child: SizedBox(
+                height: 28,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _colorFilters.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
+                  itemBuilder: (context, i) {
+                    final colorHex = _colorFilters[i].$1;
+                    final colorName = _colorFilters[i].$2;
+                    final colorVal =
+                        Color(int.parse(colorHex.replaceFirst('#', '0xFF')));
+                    final active = _selectedColor == colorHex;
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          if (active) {
+                            _selectedColor = null;
+                            _controller.clear();
+                            context.read<SearchBloc>().add(SearchCleared());
+                          } else {
+                            _selectedColor = colorHex;
+                            _controller.text = 'color:$colorName';
+                            context
+                                .read<SearchBloc>()
+                                .add(SearchQueryChanged('color:$colorName'));
+                          }
+                        });
+                      },
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: colorVal,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: active
+                                ? (Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black)
+                                : Colors.transparent,
+                            width: 2.5,
+                          ),
+                          boxShadow: [
+                            if (active)
+                              BoxShadow(
+                                color: colorVal.withOpacity(0.4),
+                                blurRadius: 6,
+                                spreadRadius: 1,
+                              )
+                          ],
+                        ),
+                        child: active
+                            ? const Icon(Icons.check_rounded,
+                                size: 14, color: Colors.white)
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
 
             const SizedBox(height: 8),
@@ -245,7 +355,8 @@ class _HistoryView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              const Icon(Icons.history_rounded, size: 16, color: Color(0xFF64748B)),
+              const Icon(Icons.history_rounded,
+                  size: 16, color: Color(0xFF64748B)),
               const SizedBox(width: 6),
               Text('Recent Searches',
                   style: Theme.of(context)
@@ -257,9 +368,12 @@ class _HistoryView extends StatelessWidget {
         ),
         ...history.map((q) => ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.history_rounded, size: 18, color: Color(0xFF64748B)),
-              title: Text(q, style: const TextStyle(fontFamily: 'Inter', fontSize: 14)),
-              trailing: const Icon(Icons.north_west_rounded, size: 14, color: Color(0xFF94A3B8)),
+              leading: const Icon(Icons.history_rounded,
+                  size: 18, color: Color(0xFF64748B)),
+              title: Text(q,
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 14)),
+              trailing: const Icon(Icons.north_west_rounded,
+                  size: 14, color: Color(0xFF94A3B8)),
               onTap: () => onSelect(q),
             )),
       ],
@@ -292,7 +406,8 @@ class _SuggestionsView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              const Icon(Icons.bolt_rounded, size: 16, color: DesignTokens.brand),
+              const Icon(Icons.bolt_rounded,
+                  size: 16, color: DesignTokens.brand),
               const SizedBox(width: 6),
               Text('Try asking',
                   style: Theme.of(context)
@@ -309,12 +424,18 @@ class _SuggestionsView extends StatelessWidget {
                   onTap: () => onSelect(e.value.$1),
                   borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
-                      borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+                      color: isDark
+                          ? DesignTokens.darkCard
+                          : DesignTokens.lightSurface,
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusMd),
                       border: Border.all(
-                          color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                          color: isDark
+                              ? DesignTokens.darkBorder
+                              : DesignTokens.lightBorder),
                     ),
                     child: Row(
                       children: [
@@ -513,7 +634,8 @@ class _NoResultsView extends StatelessWidget {
     return EmptyStateWidget(
       icon: Icons.search_off_rounded,
       title: 'No results for "$query"',
-      subtitle: 'Try different keywords, or import and index files to enable search.',
+      subtitle:
+          'Try different keywords, or import and index files to enable search.',
       iconColor: DesignTokens.brand,
     );
   }

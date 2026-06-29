@@ -64,7 +64,8 @@ class _OverviewTab extends StatelessWidget {
 
   String _formatBytes(int bytes) {
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (bytes < 1024 * 1024 * 1024)
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
@@ -127,7 +128,9 @@ class _OverviewTab extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: isScanning
                       ? null
-                      : () => context.read<StorageBloc>().add(StorageScanRequested()),
+                      : () => context
+                          .read<StorageBloc>()
+                          .add(StorageScanRequested()),
                   icon: isScanning
                       ? const SizedBox(
                           width: 14,
@@ -163,7 +166,8 @@ class _OverviewTab extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      const Icon(Icons.radar_rounded, size: 36, color: Color(0xFF64748B)),
+                      const Icon(Icons.radar_rounded,
+                          size: 36, color: Color(0xFF64748B)),
                       const SizedBox(height: 8),
                       Text('Run a scan to analyze your storage',
                           style: Theme.of(context).textTheme.bodyMedium),
@@ -177,7 +181,8 @@ class _OverviewTab extends StatelessWidget {
               icon: Icons.content_copy_rounded,
               color: DesignTokens.warning,
               title: 'Exact Duplicates',
-              subtitle: '${state.duplicates.length} groups — ${_formatBytes(analysis.duplicateBytes)} recoverable',
+              subtitle:
+                  '${state.duplicates.length} groups — ${_formatBytes(analysis.duplicateBytes)} recoverable',
               count: state.duplicates.length,
               onReview: () => DefaultTabController.of(context).animateTo(1),
             ).animate().fadeIn(duration: 200.ms).slideY(begin: 0.04, end: 0),
@@ -189,16 +194,23 @@ class _OverviewTab extends StatelessWidget {
               subtitle: '${analysis.blurryCount} blurry images detected',
               count: analysis.blurryCount,
               onReview: () {},
-            ).animate().fadeIn(delay: 60.ms, duration: 200.ms).slideY(begin: 0.04, end: 0),
+            )
+                .animate()
+                .fadeIn(delay: 60.ms, duration: 200.ms)
+                .slideY(begin: 0.04, end: 0),
             const SizedBox(height: 8),
             _IssueCard(
               icon: Icons.screenshot_monitor_rounded,
               color: DesignTokens.accent,
               title: 'Empty Screenshots',
-              subtitle: '${analysis.emptyScreenshotCount} mostly blank screenshots',
+              subtitle:
+                  '${analysis.emptyScreenshotCount} mostly blank screenshots',
               count: analysis.emptyScreenshotCount,
               onReview: () {},
-            ).animate().fadeIn(delay: 120.ms, duration: 200.ms).slideY(begin: 0.04, end: 0),
+            )
+                .animate()
+                .fadeIn(delay: 120.ms, duration: 200.ms)
+                .slideY(begin: 0.04, end: 0),
             const SizedBox(height: 8),
             _IssueCard(
               icon: Icons.folder_zip_rounded,
@@ -207,7 +219,10 @@ class _OverviewTab extends StatelessWidget {
               subtitle: '${state.similar.length} visual similarity clusters',
               count: state.similar.length,
               onReview: () => DefaultTabController.of(context).animateTo(2),
-            ).animate().fadeIn(delay: 180.ms, duration: 200.ms).slideY(begin: 0.04, end: 0),
+            )
+                .animate()
+                .fadeIn(delay: 180.ms, duration: 200.ms)
+                .slideY(begin: 0.04, end: 0),
           ],
 
           if (analysis != null && analysis.recoverableBytes > 0) ...[
@@ -215,9 +230,11 @@ class _OverviewTab extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
-                onPressed: () => _confirmCleanup(context, analysis.recoverableBytes),
+                onPressed: () =>
+                    _confirmCleanup(context, analysis.recoverableBytes),
                 icon: const Icon(Icons.auto_delete_rounded),
-                label: Text('Clean Up ${_formatBytes(analysis.recoverableBytes)}'),
+                label:
+                    Text('Clean Up ${_formatBytes(analysis.recoverableBytes)}'),
                 style: FilledButton.styleFrom(
                   backgroundColor: DesignTokens.success,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -259,7 +276,8 @@ class _OverviewTab extends StatelessWidget {
                 context.read<StorageBloc>().add(StorageDeleteRequested(ids));
               }
             },
-            style: FilledButton.styleFrom(backgroundColor: DesignTokens.success),
+            style:
+                FilledButton.styleFrom(backgroundColor: DesignTokens.success),
             child: const Text('Clean Up'),
           ),
         ],
@@ -401,7 +419,8 @@ class _DuplicateGroupCardState extends State<_DuplicateGroupCard> {
 
     String _fmt(int bytes) {
       if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
-      if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+      if (bytes < 1024 * 1024 * 1024)
+        return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
     }
 
@@ -420,10 +439,12 @@ class _DuplicateGroupCardState extends State<_DuplicateGroupCard> {
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: DesignTokens.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                    borderRadius:
+                        BorderRadius.circular(DesignTokens.radiusFull),
                   ),
                   child: Text(
                     '${widget.group.files.length} duplicates',
@@ -509,7 +530,8 @@ class _SimilarTab extends StatelessWidget {
       return EmptyStateWidget(
         icon: Icons.photo_library_outlined,
         title: 'No similar images',
-        subtitle: 'Run a scan to find near-duplicate and visually similar images.',
+        subtitle:
+            'Run a scan to find near-duplicate and visually similar images.',
         actionLabel: 'Scan Now',
         onAction: () => context.read<StorageBloc>().add(StorageScanRequested()),
         iconColor: DesignTokens.accent,
@@ -533,7 +555,8 @@ class _SimilarTab extends StatelessWidget {
                           .titleSmall
                           ?.copyWith(fontWeight: FontWeight.w700)),
                   const Spacer(),
-                  Text('${(group.similarity * 100).toStringAsFixed(0)}% similar',
+                  Text(
+                      '${(group.similarity * 100).toStringAsFixed(0)}% similar',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
@@ -548,9 +571,11 @@ class _SimilarTab extends StatelessWidget {
                     contentPadding: EdgeInsets.zero,
                     leading: FileTypeDisplay.iconBox(f.extension, boxSize: 32),
                     title: Text(f.filename,
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                        style:
+                            const TextStyle(fontFamily: 'Inter', fontSize: 12)),
                     subtitle: Text(f.formattedSize,
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11)),
+                        style:
+                            const TextStyle(fontFamily: 'Inter', fontSize: 11)),
                   )),
             ],
           ),

@@ -1,3 +1,5 @@
+#![allow(unused_imports, dead_code)]
+
 //! Metadata extraction from files (EXIF, PDF info, audio tags, etc.)
 
 use crate::error::CoreError;

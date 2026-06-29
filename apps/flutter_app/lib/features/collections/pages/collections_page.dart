@@ -124,8 +124,7 @@ class _CollectionsPageState extends State<CollectionsPage>
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               final name = ctl.text.trim();
@@ -194,18 +193,30 @@ class _CollectionGrid extends StatelessWidget {
   });
 
   static const _smartCollections = [
-    _SmartMeta('Cloud & DevOps', Icons.cloud_rounded, Color(0xFF0EA5E9), 'Infrastructure, Docker, Kubernetes, AWS'),
-    _SmartMeta('Security', Icons.security_rounded, Color(0xFFEF4444), 'CVEs, certificates, passwords, audits'),
-    _SmartMeta('Finance', Icons.attach_money_rounded, Color(0xFF10B981), 'Invoices, receipts, tax, banking'),
-    _SmartMeta('Learning', Icons.school_rounded, Color(0xFF6366F1), 'Tutorials, notes, flashcards, books'),
-    _SmartMeta('Meetings', Icons.groups_rounded, Color(0xFFF59E0B), 'Meeting notes, recordings, agendas'),
-    _SmartMeta('Chess', Icons.sports_esports_rounded, Color(0xFF8B5CF6), 'Openings, analysis, games, tactics'),
-    _SmartMeta('Screenshots', Icons.screenshot_monitor_rounded, Color(0xFF64748B), 'Screenshots from any app'),
-    _SmartMeta('Travel', Icons.flight_rounded, Color(0xFF0891B2), 'Itineraries, tickets, visas, photos'),
-    _SmartMeta('Medical', Icons.local_hospital_rounded, Color(0xFFDC2626), 'Reports, prescriptions, health data'),
-    _SmartMeta('Research', Icons.science_rounded, Color(0xFF7C3AED), 'Papers, experiments, citations'),
-    _SmartMeta('Code & Dev', Icons.code_rounded, Color(0xFF16A34A), 'Source code, configs, READMEs'),
-    _SmartMeta('Personal', Icons.person_rounded, Color(0xFFDB2777), 'Personal memories, diary, photos'),
+    _SmartMeta('Cloud & DevOps', Icons.cloud_rounded, Color(0xFF0EA5E9),
+        'Infrastructure, Docker, Kubernetes, AWS'),
+    _SmartMeta('Security', Icons.security_rounded, Color(0xFFEF4444),
+        'CVEs, certificates, passwords, audits'),
+    _SmartMeta('Finance', Icons.attach_money_rounded, Color(0xFF10B981),
+        'Invoices, receipts, tax, banking'),
+    _SmartMeta('Learning', Icons.school_rounded, Color(0xFF6366F1),
+        'Tutorials, notes, flashcards, books'),
+    _SmartMeta('Meetings', Icons.groups_rounded, Color(0xFFF59E0B),
+        'Meeting notes, recordings, agendas'),
+    _SmartMeta('Chess', Icons.sports_esports_rounded, Color(0xFF8B5CF6),
+        'Openings, analysis, games, tactics'),
+    _SmartMeta('Screenshots', Icons.screenshot_monitor_rounded,
+        Color(0xFF64748B), 'Screenshots from any app'),
+    _SmartMeta('Travel', Icons.flight_rounded, Color(0xFF0891B2),
+        'Itineraries, tickets, visas, photos'),
+    _SmartMeta('Medical', Icons.local_hospital_rounded, Color(0xFFDC2626),
+        'Reports, prescriptions, health data'),
+    _SmartMeta('Research', Icons.science_rounded, Color(0xFF7C3AED),
+        'Papers, experiments, citations'),
+    _SmartMeta('Code & Dev', Icons.code_rounded, Color(0xFF16A34A),
+        'Source code, configs, READMEs'),
+    _SmartMeta('Personal', Icons.person_rounded, Color(0xFFDB2777),
+        'Personal memories, diary, photos'),
   ];
 
   @override
@@ -220,9 +231,8 @@ class _CollectionGrid extends StatelessWidget {
           childAspectRatio: 1.4,
         ),
         itemCount: 6,
-        itemBuilder: (_, i) => const SkeletonBox(radius: 16)
-            .animate()
-            .fadeIn(delay: (i * 40).ms),
+        itemBuilder: (_, i) =>
+            const SkeletonBox(radius: 16).animate().fadeIn(delay: (i * 40).ms),
       );
     }
 
@@ -239,26 +249,22 @@ class _CollectionGrid extends StatelessWidget {
                   onDelete: null,
                 ))
             .toList()
-        : collections
-            .asMap()
-            .entries
-            .map((e) {
-              final c = e.value;
-              final meta = isSmart && e.key < _smartCollections.length
-                  ? _smartCollections[e.key]
-                  : null;
-              return _CollectionGridItem(
-                name: c.name,
-                icon: meta?.icon ?? Icons.folder_rounded,
-                color: meta?.color ?? DesignTokens.brand,
-                subtitle: '${c.fileCount} files',
-                fileCount: c.fileCount,
-                isSmartTemplate: false,
-                onTap: () => onTap?.call(c),
-                onDelete: onDelete != null ? () => onDelete!(c) : null,
-              );
-            })
-            .toList();
+        : collections.asMap().entries.map((e) {
+            final c = e.value;
+            final meta = isSmart && e.key < _smartCollections.length
+                ? _smartCollections[e.key]
+                : null;
+            return _CollectionGridItem(
+              name: c.name,
+              icon: meta?.icon ?? Icons.folder_rounded,
+              color: meta?.color ?? DesignTokens.brand,
+              subtitle: '${c.fileCount} files',
+              fileCount: c.fileCount,
+              isSmartTemplate: false,
+              onTap: () => onTap?.call(c),
+              onDelete: onDelete != null ? () => onDelete!(c) : null,
+            );
+          }).toList();
 
     if (items.isEmpty) {
       return EmptyStateWidget(
@@ -282,9 +288,10 @@ class _CollectionGrid extends StatelessWidget {
         childAspectRatio: 1.35,
       ),
       itemCount: items.length,
-      itemBuilder: (context, i) =>
-          items[i].animate().fadeIn(delay: (i * 35).ms, duration: 200.ms)
-              .slideY(begin: 0.04, end: 0),
+      itemBuilder: (context, i) => items[i]
+          .animate()
+          .fadeIn(delay: (i * 35).ms, duration: 200.ms)
+          .slideY(begin: 0.04, end: 0),
     );
   }
 }
@@ -364,7 +371,9 @@ class _CollectionGridItemState extends State<_CollectionGridItem>
             color: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
             borderRadius: BorderRadius.circular(DesignTokens.radiusLg),
             border: Border.all(
-                color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                color: isDark
+                    ? DesignTokens.darkBorder
+                    : DesignTokens.lightBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,17 +385,20 @@ class _CollectionGridItemState extends State<_CollectionGridItem>
                     height: 38,
                     decoration: BoxDecoration(
                       color: widget.color.withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusMd),
                     ),
                     child: Icon(widget.icon, color: widget.color, size: 20),
                   ),
                   const Spacer(),
                   if (widget.isSmartTemplate)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: DesignTokens.brand.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                        borderRadius:
+                            BorderRadius.circular(DesignTokens.radiusFull),
                       ),
                       child: const Text('Auto',
                           style: TextStyle(
@@ -398,10 +410,12 @@ class _CollectionGridItemState extends State<_CollectionGridItem>
                   else if (widget.onDelete != null)
                     InkWell(
                       onTap: widget.onDelete,
-                      borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusFull),
                       child: const Padding(
                         padding: EdgeInsets.all(4),
-                        child: Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                        child: Icon(Icons.delete_outline_rounded,
+                            size: 14, color: Color(0xFF94A3B8)),
                       ),
                     ),
                 ],

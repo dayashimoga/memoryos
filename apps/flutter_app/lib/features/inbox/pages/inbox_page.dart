@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
@@ -27,14 +26,15 @@ class _InboxPageState extends State<InboxPage> {
       extension: 'md',
       sizeBytes: 18432,
       suggestion: _Suggestion.organize,
-      aiReason: 'Add to Cloud & DevOps collection — matches K8s networking content',
+      aiReason:
+          'Add to Cloud & DevOps collection — matches K8s networking content',
       confidence: 0.94,
       targetCollection: 'Cloud & DevOps',
     ),
     _InboxItem(
       filename: 'screenshot_20241203_142301.png',
       extension: 'png',
-      sizeBytes: 2_097_152,
+      sizeBytes: 2097152,
       suggestion: _Suggestion.review,
       aiReason: 'Screenshot appears empty — consider deleting',
       confidence: 0.87,
@@ -43,7 +43,7 @@ class _InboxPageState extends State<InboxPage> {
     _InboxItem(
       filename: 'invoice_amazon_nov2024.pdf',
       extension: 'pdf',
-      sizeBytes: 145_920,
+      sizeBytes: 145920,
       suggestion: _Suggestion.organize,
       aiReason: 'Invoice detected — add to Finance collection',
       confidence: 0.96,
@@ -61,7 +61,7 @@ class _InboxPageState extends State<InboxPage> {
     _InboxItem(
       filename: 'copy_of_copy_of_report.docx',
       extension: 'docx',
-      sizeBytes: 256_000,
+      sizeBytes: 256000,
       suggestion: _Suggestion.delete,
       aiReason: 'Likely duplicate — exact match found in your library',
       confidence: 0.91,
@@ -70,7 +70,7 @@ class _InboxPageState extends State<InboxPage> {
     _InboxItem(
       filename: 'travel_itinerary_japan.pdf',
       extension: 'pdf',
-      sizeBytes: 512_000,
+      sizeBytes: 512000,
       suggestion: _Suggestion.organize,
       aiReason: 'Travel document detected — add to Travel collection',
       confidence: 0.95,
@@ -78,8 +78,12 @@ class _InboxPageState extends State<InboxPage> {
     ),
   ];
 
-  List<_InboxItem> get _active =>
-      _items.asMap().entries.where((e) => !_dismissed.contains(e.key)).map((e) => e.value).toList();
+  List<_InboxItem> get _active => _items
+      .asMap()
+      .entries
+      .where((e) => !_dismissed.contains(e.key))
+      .map((e) => e.value)
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -126,12 +130,14 @@ class _InboxPageState extends State<InboxPage> {
                           .map((e) => e.key));
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('All suggestions applied ✓')),
+                      const SnackBar(
+                          content: Text('All suggestions applied ✓')),
                     );
                   },
             icon: const Icon(Icons.done_all_rounded, size: 16),
             label: const Text('Apply All',
-                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontFamily: 'Inter', fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -139,28 +145,37 @@ class _InboxPageState extends State<InboxPage> {
           ? EmptyStateWidget(
               icon: Icons.inbox_rounded,
               title: 'Inbox empty',
-              subtitle: 'All items have been organized. New imports will appear here.',
+              subtitle:
+                  'All items have been organized. New imports will appear here.',
               iconColor: DesignTokens.success,
             )
           : Column(
               children: [
                 // Stats bar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   color: isDark ? DesignTokens.darkCard : DesignTokens.lightBg,
                   child: Row(
                     children: [
                       _SuggestionChip(
                           _Suggestion.organize,
-                          _items.where((i) => i.suggestion == _Suggestion.organize).length),
+                          _items
+                              .where(
+                                  (i) => i.suggestion == _Suggestion.organize)
+                              .length),
                       const SizedBox(width: 8),
                       _SuggestionChip(
                           _Suggestion.review,
-                          _items.where((i) => i.suggestion == _Suggestion.review).length),
+                          _items
+                              .where((i) => i.suggestion == _Suggestion.review)
+                              .length),
                       const SizedBox(width: 8),
                       _SuggestionChip(
                           _Suggestion.delete,
-                          _items.where((i) => i.suggestion == _Suggestion.delete).length),
+                          _items
+                              .where((i) => i.suggestion == _Suggestion.delete)
+                              .length),
                     ],
                   ),
                 ),
@@ -179,12 +194,17 @@ class _InboxPageState extends State<InboxPage> {
                             child: _InboxCard(
                               item: e.value,
                               index: e.key,
-                              onApply: () => setState(() => _dismissed.add(e.key)),
-                              onDismiss: () => setState(() => _dismissed.add(e.key)),
-                            ).animate().fadeIn(
+                              onApply: () =>
+                                  setState(() => _dismissed.add(e.key)),
+                              onDismiss: () =>
+                                  setState(() => _dismissed.add(e.key)),
+                            )
+                                .animate()
+                                .fadeIn(
                                   delay: (e.key * 50).ms,
                                   duration: 200.ms,
-                                ).slideX(begin: 0.04, end: 0),
+                                )
+                                .slideX(begin: 0.04, end: 0),
                           ),
                         )
                         .toList(),
@@ -254,9 +274,7 @@ class _InboxCardState extends State<_InboxCard> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return PremiumCard(
-      backgroundColor: isDark
-          ? DesignTokens.darkCard
-          : DesignTokens.lightCard,
+      backgroundColor: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -284,15 +302,18 @@ class _InboxCardState extends State<_InboxCard> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: item.suggestion.color.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                            borderRadius:
+                                BorderRadius.circular(DesignTokens.radiusFull),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(item.suggestion.icon, size: 10, color: item.suggestion.color),
+                              Icon(item.suggestion.icon,
+                                  size: 10, color: item.suggestion.color),
                               const SizedBox(width: 4),
                               Text(item.suggestion.label,
                                   style: TextStyle(
@@ -319,11 +340,15 @@ class _InboxCardState extends State<_InboxCard> {
                     Text(
                       item.aiReason,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                            color: isDark
+                                ? const Color(0xFF94A3B8)
+                                : const Color(0xFF64748B),
                             height: 1.4,
                           ),
                       maxLines: _expanded ? null : 1,
-                      overflow: _expanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                      overflow: _expanded
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
                     ),
                   ],
                 ),
@@ -331,7 +356,9 @@ class _InboxCardState extends State<_InboxCard> {
 
               IconButton(
                 icon: Icon(
-                  _expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                  _expanded
+                      ? Icons.expand_less_rounded
+                      : Icons.expand_more_rounded,
                   size: 18,
                   color: const Color(0xFF94A3B8),
                 ),
@@ -339,7 +366,6 @@ class _InboxCardState extends State<_InboxCard> {
               ),
             ],
           ),
-
           if (_expanded || true) ...[
             const SizedBox(height: 10),
             Row(
@@ -354,7 +380,10 @@ class _InboxCardState extends State<_InboxCard> {
                           : item.suggestion == _Suggestion.delete
                               ? 'Delete File'
                               : 'Mark Reviewed',
-                      style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 12),
+                      style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12),
                     ),
                     style: FilledButton.styleFrom(
                       backgroundColor: item.suggestion.color,
@@ -386,22 +415,22 @@ enum _Suggestion {
   delete;
 
   String get label => switch (this) {
-    _Suggestion.organize => 'Organize',
-    _Suggestion.review => 'Review',
-    _Suggestion.delete => 'Delete',
-  };
+        _Suggestion.organize => 'Organize',
+        _Suggestion.review => 'Review',
+        _Suggestion.delete => 'Delete',
+      };
 
   IconData get icon => switch (this) {
-    _Suggestion.organize => Icons.drive_file_move_rounded,
-    _Suggestion.review => Icons.visibility_rounded,
-    _Suggestion.delete => Icons.delete_rounded,
-  };
+        _Suggestion.organize => Icons.drive_file_move_rounded,
+        _Suggestion.review => Icons.visibility_rounded,
+        _Suggestion.delete => Icons.delete_rounded,
+      };
 
   Color get color => switch (this) {
-    _Suggestion.organize => DesignTokens.brand,
-    _Suggestion.review => DesignTokens.warning,
-    _Suggestion.delete => DesignTokens.error,
-  };
+        _Suggestion.organize => DesignTokens.brand,
+        _Suggestion.review => DesignTokens.warning,
+        _Suggestion.delete => DesignTokens.error,
+      };
 }
 
 class _InboxItem {

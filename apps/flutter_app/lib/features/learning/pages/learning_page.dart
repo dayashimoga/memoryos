@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/repositories.dart';
@@ -61,7 +60,8 @@ class _LearningPageState extends State<LearningPage>
               onPressed: () => _generateFromFile(context),
               icon: const Icon(Icons.auto_awesome_rounded, size: 16),
               label: const Text('Generate',
-                  style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      fontFamily: 'Inter', fontWeight: FontWeight.w600)),
             ),
           ],
         ),
@@ -82,7 +82,8 @@ class _LearningPageState extends State<LearningPage>
               onPrev: _cards.isEmpty
                   ? null
                   : () => setState(() {
-                        _cardIndex = (_cardIndex - 1 + _cards.length) % _cards.length;
+                        _cardIndex =
+                            (_cardIndex - 1 + _cards.length) % _cards.length;
                         _flipped = false;
                       }),
             ),
@@ -118,7 +119,8 @@ class _LearningPageState extends State<LearningPage>
               onPressed: () {
                 Navigator.pop(ctx);
                 context.read<AiBloc>().add(
-                      AiGenerateFlashcards(ctl.text.trim().isEmpty ? 'recent' : ctl.text.trim()),
+                      AiGenerateFlashcards(
+                          ctl.text.trim().isEmpty ? 'recent' : ctl.text.trim()),
                     );
               },
               child: const Text('Generate'),
@@ -161,7 +163,8 @@ class _FlashcardTab extends StatelessWidget {
                 CircularProgressIndicator(color: DesignTokens.brand),
                 SizedBox(height: 16),
                 Text('Generating flashcards...',
-                    style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B))),
+                    style: TextStyle(
+                        fontFamily: 'Inter', color: Color(0xFF64748B))),
               ],
             ),
           );
@@ -171,7 +174,8 @@ class _FlashcardTab extends StatelessWidget {
           return EmptyStateWidget(
             icon: Icons.style_rounded,
             title: 'No flashcards yet',
-            subtitle: 'Tap "Generate" to create AI-powered flashcards from your files.',
+            subtitle:
+                'Tap "Generate" to create AI-powered flashcards from your files.',
             iconColor: DesignTokens.brand,
           );
         }
@@ -193,7 +197,8 @@ class _FlashcardTab extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusFull),
                       child: LinearProgressIndicator(
                         value: (cardIndex + 1) / cards.length,
                         color: DesignTokens.brand,
@@ -214,7 +219,8 @@ class _FlashcardTab extends StatelessWidget {
                   onTap: onFlip,
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 350),
-                    transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                    transitionBuilder: (child, anim) =>
+                        ScaleTransition(scale: anim, child: child),
                     child: Container(
                       key: ValueKey('$cardIndex-$flipped'),
                       decoration: BoxDecoration(
@@ -222,10 +228,17 @@ class _FlashcardTab extends StatelessWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: flipped
-                              ? [DesignTokens.success.withOpacity(0.12), DesignTokens.tertiary.withOpacity(0.08)]
-                              : [DesignTokens.brand.withOpacity(0.12), DesignTokens.accent.withOpacity(0.08)],
+                              ? [
+                                  DesignTokens.success.withOpacity(0.12),
+                                  DesignTokens.tertiary.withOpacity(0.08)
+                                ]
+                              : [
+                                  DesignTokens.brand.withOpacity(0.12),
+                                  DesignTokens.accent.withOpacity(0.08)
+                                ],
                         ),
-                        borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
+                        borderRadius:
+                            BorderRadius.circular(DesignTokens.radiusXl),
                         border: Border.all(
                           color: flipped
                               ? DesignTokens.success.withOpacity(0.25)
@@ -236,10 +249,15 @@ class _FlashcardTab extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 4),
                             decoration: BoxDecoration(
-                              color: (flipped ? DesignTokens.success : DesignTokens.brand).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                              color: (flipped
+                                      ? DesignTokens.success
+                                      : DesignTokens.brand)
+                                  .withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(
+                                  DesignTokens.radiusFull),
                             ),
                             child: Text(
                               flipped ? 'Answer' : 'Question',
@@ -247,7 +265,9 @@ class _FlashcardTab extends StatelessWidget {
                                 fontFamily: 'Inter',
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
-                                color: flipped ? DesignTokens.success : DesignTokens.brand,
+                                color: flipped
+                                    ? DesignTokens.success
+                                    : DesignTokens.brand,
                               ),
                             ),
                           ),
@@ -256,7 +276,10 @@ class _FlashcardTab extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 32),
                             child: Text(
                               flipped ? card.back : card.front,
-                              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
                                     fontWeight: FontWeight.w600,
                                     height: 1.55,
                                   ),
@@ -264,7 +287,8 @@ class _FlashcardTab extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 24),
-                          Text('Tap to ${flipped ? "see question" : "reveal answer"}',
+                          Text(
+                              'Tap to ${flipped ? "see question" : "reveal answer"}',
                               style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 12,
@@ -289,10 +313,56 @@ class _FlashcardTab extends StatelessWidget {
                     tooltip: 'Previous',
                   ),
                   const SizedBox(width: 16),
-                  FilledButton.tonal(
-                    onPressed: onFlip,
-                    child: const Text('Flip Card'),
-                  ),
+                  if (flipped) ...[
+                    FilledButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Saved: Easy (SM-2 Interval: 5 days)'),
+                              duration: Duration(milliseconds: 700)),
+                        );
+                        onNext?.call();
+                      },
+                      style: FilledButton.styleFrom(
+                          backgroundColor: DesignTokens.success),
+                      child: const Text('Easy'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Saved: Good (SM-2 Interval: 3 days)'),
+                              duration: Duration(milliseconds: 700)),
+                        );
+                        onNext?.call();
+                      },
+                      style: FilledButton.styleFrom(
+                          backgroundColor: DesignTokens.brand),
+                      child: const Text('Good'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content:
+                                  Text('Saved: Hard (SM-2 Interval: 1 day)'),
+                              duration: Duration(milliseconds: 700)),
+                        );
+                        onNext?.call();
+                      },
+                      style: FilledButton.styleFrom(
+                          backgroundColor: DesignTokens.error),
+                      child: const Text('Hard'),
+                    ),
+                  ] else
+                    FilledButton.tonal(
+                      onPressed: onFlip,
+                      child: const Text('Flip Card'),
+                    ),
                   const SizedBox(width: 16),
                   IconButton.outlined(
                     onPressed: onNext,

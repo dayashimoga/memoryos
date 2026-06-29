@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/entities.dart';
+import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
-import 'package:memoryos/core/widgets/command_palette.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
 /// Redesigned Home Dashboard — wired to HomeBloc for real data.
@@ -44,9 +45,7 @@ class HomePage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // ── Search / Command Bar ────────────────────
-                      _HeroSearchBar()
-                          .animate()
-                          .fadeIn(duration: 300.ms),
+                      _HeroSearchBar().animate().fadeIn(duration: 300.ms),
                       const SizedBox(height: 20),
 
                       // ── Storage Overview ─────────────────────────
@@ -66,17 +65,13 @@ class HomePage extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // ── AI status banner ─────────────────────────
-                      _AiBanner()
-                          .animate()
-                          .fadeIn(delay: 100.ms),
+                      _AiBanner().animate().fadeIn(delay: 100.ms),
                       const SizedBox(height: 20),
 
                       // ── Quick actions ─────────────────────────────
                       const SectionHeader(title: 'Quick Actions'),
                       const SizedBox(height: 8),
-                      _QuickActions()
-                          .animate()
-                          .fadeIn(delay: 140.ms),
+                      _QuickActions().animate().fadeIn(delay: 140.ms),
                       const SizedBox(height: 20),
 
                       // ── Recent files header ───────────────────────
@@ -110,7 +105,8 @@ class HomePage extends StatelessWidget {
                   child: EmptyStateWidget(
                     icon: Icons.inbox_outlined,
                     title: 'No files yet',
-                    subtitle: 'Import files to start building your Memory Library.',
+                    subtitle:
+                        'Import files to start building your Memory Library.',
                     actionLabel: 'Import Files',
                     onAction: () => _showImportSheet(context),
                     iconColor: DesignTokens.brand,
@@ -119,14 +115,17 @@ class HomePage extends StatelessWidget {
               else
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, i) => _FileCard(entry: state.recentFiles[i], index: i)
-                          .animate()
-                          .fadeIn(delay: (i * 25).ms, duration: 220.ms)
-                          .slideX(begin: 0.03, end: 0),
-                      childCount: state.recentFiles.length,
-                    ),
+                  sliver: SliverMasonryGrid.count(
+                    crossAxisCount:
+                        MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    itemBuilder: (context, i) =>
+                        _FileCard(entry: state.recentFiles[i], index: i)
+                            .animate()
+                            .fadeIn(delay: (i * 25).ms, duration: 220.ms)
+                            .slideY(begin: 0.04, end: 0),
+                    childCount: state.recentFiles.length,
                   ),
                 ),
 
@@ -142,8 +141,8 @@ class HomePage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-            top: Radius.circular(DesignTokens.radiusXl)),
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(DesignTokens.radiusXl)),
       ),
       builder: (_) => _ImportSheet(),
     );
@@ -221,12 +220,14 @@ class _HeroSearchBar extends StatelessWidget {
               color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
               borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
               border: Border.all(
-                color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+                color:
+                    isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
               ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.search_rounded, color: DesignTokens.brand, size: 20),
+                const Icon(Icons.search_rounded,
+                    color: DesignTokens.brand, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -365,11 +366,20 @@ class _StorageCard extends StatelessWidget {
                     const SizedBox(height: 10),
                     Row(
                       children: [
-                        _MiniStat(label: 'Files', value: '${stats.totalFiles}', color: DesignTokens.brand),
+                        _MiniStat(
+                            label: 'Files',
+                            value: '${stats.totalFiles}',
+                            color: DesignTokens.brand),
                         const SizedBox(width: 16),
-                        _MiniStat(label: 'Indexed', value: '${indexStats.indexedFiles}', color: DesignTokens.success),
+                        _MiniStat(
+                            label: 'Indexed',
+                            value: '${indexStats.indexedFiles}',
+                            color: DesignTokens.success),
                         const SizedBox(width: 16),
-                        _MiniStat(label: 'Pending', value: '${indexStats.pendingFiles}', color: DesignTokens.warning),
+                        _MiniStat(
+                            label: 'Pending',
+                            value: '${indexStats.pendingFiles}',
+                            color: DesignTokens.warning),
                       ],
                     ),
                   ],
@@ -404,7 +414,8 @@ class _StorageCard extends StatelessWidget {
                   TextButton(
                     onPressed: () => GoRouter.of(context).go('/duplicates'),
                     style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       minimumSize: const Size(0, 0),
                     ),
                     child: const Text('Clean Up',
@@ -429,7 +440,8 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-  const _MiniStat({required this.label, required this.value, required this.color});
+  const _MiniStat(
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -459,7 +471,8 @@ class _AiBanner extends StatelessWidget {
       builder: (context, state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         return PremiumCard(
-          backgroundColor: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
+          backgroundColor:
+              isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
           child: Row(
             children: [
               Container(
@@ -487,7 +500,9 @@ class _AiBanner extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      state.modelLoaded ? 'AI Model Active' : 'AI Ready to Setup',
+                      state.modelLoaded
+                          ? 'AI Model Active'
+                          : 'AI Ready to Setup',
                       style: Theme.of(context)
                           .textTheme
                           .titleSmall
@@ -506,7 +521,8 @@ class _AiBanner extends StatelessWidget {
                 FilledButton.tonal(
                   onPressed: () => context.go('/models'),
                   style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   ),
                   child: const Text('Download',
                       style: TextStyle(
@@ -529,7 +545,8 @@ class _QuickActions extends StatelessWidget {
     _QA(Icons.add_photo_alternate_rounded, 'Import', DesignTokens.brand, null),
     _QA(Icons.chat_bubble_rounded, 'Ask AI', DesignTokens.accent, '/chat'),
     _QA(Icons.hub_rounded, 'Galaxy', Color(0xFF8B5CF6), '/galaxy'),
-    _QA(Icons.auto_delete_rounded, 'Cleanup', DesignTokens.warning, '/duplicates'),
+    _QA(Icons.auto_delete_rounded, 'Cleanup', DesignTokens.warning,
+        '/duplicates'),
     _QA(Icons.school_rounded, 'Study', DesignTokens.success, '/learning'),
     _QA(Icons.lock_rounded, 'Vault', Color(0xFF64748B), '/vault'),
   ];
@@ -587,7 +604,8 @@ class _ActionChip extends StatelessWidget {
           color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
           borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
           border: Border.all(
-              color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+              color:
+                  isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -621,91 +639,68 @@ class _FileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: DesignTokens.space8),
-      child: PremiumCard(
-        onTap: () => context.go('/file/${entry.id}'),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FileTypeDisplay.iconBox(entry.extension, boxSize: 48),
-            const SizedBox(width: DesignTokens.space12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.filename,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (entry.summary != null && entry.summary!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      entry.summary!,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isDark
-                                ? const Color(0xFF64748B)
-                                : const Color(0xFF94A3B8),
-                          ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      ...entry.tags
-                          .take(2)
-                          .map((t) => Padding(
-                                padding: const EdgeInsets.only(right: 6),
-                                child: _TagChip(t),
-                              )),
-                      const Spacer(),
-                      Text(entry.formattedSize,
-                          style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(width: 6),
-                      Text('·',
-                          style: Theme.of(context).textTheme.bodySmall),
-                      const SizedBox(width: 6),
-                      Text(entry.timeAgo,
-                          style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                ],
+    return PremiumCard(
+      onTap: () => context.go('/file/${entry.id}'),
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Large preview area
+          Container(
+            height: index % 2 == 0 ? 140 : 180, // Staggered height
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: isDark ? DesignTokens.darkBg : const Color(0xFFF1F5F9),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(DesignTokens.radiusLg),
               ),
             ),
-            _FileContextMenu(entry: entry),
-          ],
-        ),
+            child: Center(
+              child: FileTypeDisplay.iconBox(entry.extension, boxSize: 56),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(DesignTokens.space12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        entry.filename,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    _FileContextMenu(entry: entry),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(entry.formattedSize,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(fontSize: 10)),
+                    const Spacer(),
+                    Text(entry.timeAgo,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodySmall
+                            ?.copyWith(fontSize: 10)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  final String tag;
-  const _TagChip(this.tag);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: DesignTokens.brand.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
-      ),
-      child: Text(tag,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            color: DesignTokens.brand,
-          )),
     );
   }
 }
@@ -762,8 +757,7 @@ class _FileContextMenu extends StatelessWidget {
                 dense: true,
                 leading:
                     Icon(Icons.delete_rounded, size: 16, color: Colors.red),
-                title:
-                    Text('Remove', style: TextStyle(color: Colors.red)))),
+                title: Text('Remove', style: TextStyle(color: Colors.red)))),
       ],
     );
   }
@@ -775,11 +769,11 @@ class _FileContextMenu extends StatelessWidget {
         title: const Text('Remove from index?'),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(DesignTokens.radiusXl)),
-        content: Text('Remove "${entry.filename}" from MemoryOS?\nThe original file will NOT be deleted.'),
+        content: Text(
+            'Remove "${entry.filename}" from MemoryOS?\nThe original file will NOT be deleted.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
@@ -800,7 +794,11 @@ class _ImportSheet extends StatelessWidget {
   static const _options = [
     (Icons.photo_library_rounded, 'Photo Library', 'Import photos and videos'),
     (Icons.folder_open_rounded, 'Files & Folders', 'Import any file type'),
-    (Icons.screenshot_monitor_rounded, 'Screenshots Folder', 'Import screenshot directory'),
+    (
+      Icons.screenshot_monitor_rounded,
+      'Screenshots Folder',
+      'Import screenshot directory'
+    ),
     (Icons.mic_rounded, 'Voice Note', 'Record a new voice memo'),
     (Icons.link_rounded, 'URL / Web Page', 'Save a web page to your library'),
   ];
@@ -839,8 +837,7 @@ class _ImportSheet extends StatelessWidget {
                   height: 40,
                   decoration: BoxDecoration(
                     color: DesignTokens.brand.withOpacity(0.1),
-                    borderRadius:
-                        BorderRadius.circular(DesignTokens.radiusMd),
+                    borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                   ),
                   child: Icon(opt.$1, color: DesignTokens.brand, size: 20),
                 ),
@@ -850,8 +847,7 @@ class _ImportSheet extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         fontSize: 14)),
                 subtitle: Text(opt.$3,
-                    style: const TextStyle(
-                        fontFamily: 'Inter', fontSize: 12)),
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
                 onTap: () => Navigator.pop(context),
               ),
             ),

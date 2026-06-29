@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:go_router/go_router.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
@@ -24,7 +23,8 @@ class _ModelsPageState extends State<ModelsPage> {
       quantization: 'Q4_K_M',
       sizeGB: 1.6,
       contextLength: 8192,
-      description: 'Excellent quality for its size. Great for summarization, Q&A, and chat.',
+      description:
+          'Excellent quality for its size. Great for summarization, Q&A, and chat.',
       badge: 'Recommended',
       badgeColor: Color(0xFF10B981),
       icon: Icons.auto_awesome_rounded,
@@ -37,7 +37,8 @@ class _ModelsPageState extends State<ModelsPage> {
       quantization: 'Q4_K_M',
       sizeGB: 2.2,
       contextLength: 128000,
-      description: 'Long context window (128K). Best for analyzing long documents.',
+      description:
+          'Long context window (128K). Best for analyzing long documents.',
       badge: 'Long Context',
       badgeColor: Color(0xFF3B82F6),
       icon: Icons.memory_rounded,
@@ -50,7 +51,8 @@ class _ModelsPageState extends State<ModelsPage> {
       quantization: 'Q4_K_M',
       sizeGB: 0.9,
       contextLength: 32768,
-      description: 'Smallest and fastest. Ideal for quick categorization and tagging.',
+      description:
+          'Smallest and fastest. Ideal for quick categorization and tagging.',
       badge: 'Fastest',
       badgeColor: Color(0xFFF59E0B),
       icon: Icons.bolt_rounded,
@@ -63,7 +65,8 @@ class _ModelsPageState extends State<ModelsPage> {
       quantization: 'Q4_K_M',
       sizeGB: 2.0,
       contextLength: 131072,
-      description: 'Balanced performance. Strong at reasoning and code explanation.',
+      description:
+          'Balanced performance. Strong at reasoning and code explanation.',
       badge: null,
       badgeColor: Color(0xFF8B5CF6),
       icon: Icons.hub_rounded,
@@ -73,8 +76,6 @@ class _ModelsPageState extends State<ModelsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       appBar: AppBar(title: const Text('AI Models')),
       body: ListView(
@@ -142,8 +143,7 @@ class _ModelsPageState extends State<ModelsPage> {
                       }
                     });
                   },
-                  onActivate: () =>
-                      setState(() => _activeModelId = e.value.id),
+                  onActivate: () => setState(() => _activeModelId = e.value.id),
                 )
                     .animate()
                     .fadeIn(delay: (e.key * 60).ms, duration: 250.ms)
@@ -184,7 +184,8 @@ class _ModelInfo {
 
   String get formattedSize => '${sizeGB.toStringAsFixed(1)} GB';
   String get formattedContext {
-    if (contextLength >= 1000) return '${(contextLength / 1000).toStringAsFixed(0)}K ctx';
+    if (contextLength >= 1000)
+      return '${(contextLength / 1000).toStringAsFixed(0)}K ctx';
     return '$contextLength ctx';
   }
 }
@@ -207,14 +208,12 @@ class _ModelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isInstalled = isActive; // simplified: active = installed
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: PremiumCard(
-        border: isActive
-            ? Border.all(color: DesignTokens.brand, width: 2)
-            : null,
+        border:
+            isActive ? Border.all(color: DesignTokens.brand, width: 2) : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -225,8 +224,7 @@ class _ModelCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: model.color.withOpacity(0.1),
-                    borderRadius:
-                        BorderRadius.circular(DesignTokens.radiusMd),
+                    borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                   ),
                   child: Icon(model.icon, color: model.color, size: 22),
                 ),
@@ -290,16 +288,20 @@ class _ModelCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                _InfoChip(label: model.formattedSize, icon: Icons.storage_rounded),
+                _InfoChip(
+                    label: model.formattedSize, icon: Icons.storage_rounded),
                 const SizedBox(width: 6),
-                _InfoChip(label: model.quantization, icon: Icons.compress_rounded),
+                _InfoChip(
+                    label: model.quantization, icon: Icons.compress_rounded),
                 const SizedBox(width: 6),
-                _InfoChip(label: model.formattedContext, icon: Icons.wrap_text_rounded),
+                _InfoChip(
+                    label: model.formattedContext,
+                    icon: Icons.wrap_text_rounded),
                 const Spacer(),
                 if (isActive)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
                       color: DesignTokens.success.withOpacity(0.1),
                       borderRadius:

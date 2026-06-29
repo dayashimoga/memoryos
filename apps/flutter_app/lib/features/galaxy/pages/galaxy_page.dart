@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
@@ -24,21 +26,89 @@ class _GalaxyPageState extends State<GalaxyPage>
   Offset _lastFocalPoint = Offset.zero;
 
   // Demo nodes (real data will come from FileRepository.getKnowledgeGraph)
-  final _nodes = _buildDemoGraph();
+  late final List<_GalaxyNode> _nodes;
+  late final Ticker _ticker;
 
   @override
   void initState() {
     super.initState();
+    _nodes = _buildDemoGraph();
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
+    _ticker = createTicker(_tick)..start();
   }
 
   @override
   void dispose() {
+    _ticker.dispose();
     _pulse.dispose();
     super.dispose();
+  }
+
+  void _tick(Duration elapsed) {
+    // 1. Repulsion between all nodes
+    for (int i = 0; i < _nodes.length; i++) {
+      for (int j = i + 1; j < _nodes.length; j++) {
+        final n1 = _nodes[i];
+        final n2 = _nodes[j];
+        final dx = n2.x - n1.x;
+        final dy = n2.y - n1.y;
+        final distSq = dx * dx + dy * dy + 0.1;
+        final dist = math.sqrt(distSq);
+        if (dist < 260) {
+          final force = 180.0 / distSq;
+          final fx = (dx / dist) * force;
+          final fy = (dy / dist) * force;
+          n1.vx -= fx;
+          n1.vy -= fy;
+          n2.vx += fx;
+          n2.vy += fy;
+        }
+      }
+    }
+
+    // 2. Attraction to parent/root
+    for (final n in _nodes) {
+      if (n.parentId != null) {
+        final parent = _nodes.firstWhere((p) => p.id == n.parentId,
+            orElse: () => _nodes.firstWhere((p) => p.id == 'root'));
+        final dx = parent.x - n.x;
+        final dy = parent.y - n.y;
+        final dist = math.sqrt(dx * dx + dy * dy + 0.1);
+        final restLen = 120.0;
+        final force = (dist - restLen) * 0.05;
+        final fx = (dx / dist) * force;
+        final fy = (dy / dist) * force;
+        n.vx += fx;
+        n.vy += fy;
+        parent.vx -= fx;
+        parent.vy -= fy;
+      } else if (!n.isCenter) {
+        final root = _nodes.firstWhere((p) => p.id == 'root');
+        final dx = root.x - n.x;
+        final dy = root.y - n.y;
+        final dist = math.sqrt(dx * dx + dy * dy + 0.1);
+        final restLen = 160.0;
+        final force = (dist - restLen) * 0.03;
+        final fx = (dx / dist) * force;
+        final fy = (dy / dist) * force;
+        n.vx += fx;
+        n.vy += fy;
+      }
+    }
+
+    // 3. Update positions with dampening
+    setState(() {
+      for (final n in _nodes) {
+        if (n.isCenter) continue;
+        n.x += n.vx;
+        n.y += n.vy;
+        n.vx *= 0.82;
+        n.vy *= 0.82;
+      }
+    });
   }
 
   static List<_GalaxyNode> _buildDemoGraph() {
@@ -57,13 +127,62 @@ class _GalaxyPageState extends State<GalaxyPage>
 
     const orbits = [
       ('cloud', 'Cloud', Icons.cloud_rounded, Color(0xFF0EA5E9), 160.0, 0.0),
-      ('security', 'Security', Icons.security_rounded, Color(0xFFEF4444), 113.0, 113.0),
-      ('finance', 'Finance', Icons.attach_money_rounded, Color(0xFF10B981), 0.0, 160.0),
-      ('learning', 'Learning', Icons.school_rounded, Color(0xFF6366F1), -113.0, 113.0),
-      ('chess', 'Chess', Icons.sports_esports_rounded, Color(0xFF8B5CF6), -160.0, 0.0),
-      ('travel', 'Travel', Icons.flight_rounded, Color(0xFF0891B2), -113.0, -113.0),
-      ('screenshots', 'Screenshots', Icons.screenshot_monitor_rounded, Color(0xFF64748B), 0.0, -160.0),
-      ('medical', 'Medical', Icons.local_hospital_rounded, Color(0xFFDC2626), 113.0, -113.0),
+      (
+        'security',
+        'Security',
+        Icons.security_rounded,
+        Color(0xFFEF4444),
+        113.0,
+        113.0
+      ),
+      (
+        'finance',
+        'Finance',
+        Icons.attach_money_rounded,
+        Color(0xFF10B981),
+        0.0,
+        160.0
+      ),
+      (
+        'learning',
+        'Learning',
+        Icons.school_rounded,
+        Color(0xFF6366F1),
+        -113.0,
+        113.0
+      ),
+      (
+        'chess',
+        'Chess',
+        Icons.sports_esports_rounded,
+        Color(0xFF8B5CF6),
+        -160.0,
+        0.0
+      ),
+      (
+        'travel',
+        'Travel',
+        Icons.flight_rounded,
+        Color(0xFF0891B2),
+        -113.0,
+        -113.0
+      ),
+      (
+        'screenshots',
+        'Screenshots',
+        Icons.screenshot_monitor_rounded,
+        Color(0xFF64748B),
+        0.0,
+        -160.0
+      ),
+      (
+        'medical',
+        'Medical',
+        Icons.local_hospital_rounded,
+        Color(0xFFDC2626),
+        113.0,
+        -113.0
+      ),
     ];
 
     final nodes = <_GalaxyNode>[center];
@@ -82,10 +201,38 @@ class _GalaxyPageState extends State<GalaxyPage>
     // Outer ring (smaller)
     const outer = [
       ('docker', 'Docker', Icons.dns_rounded, Color(0xFF0EA5E9), 260.0, 0.0),
-      ('kubernetes', 'K8s', Icons.settings_input_component_rounded, Color(0xFF3B82F6), 184.0, 184.0),
-      ('terraform', 'Terraform', Icons.architecture_rounded, Color(0xFF7C3AED), 0.0, 260.0),
-      ('openings', 'Openings', Icons.sports_esports_rounded, Color(0xFF8B5CF6), -260.0, 0.0),
-      ('tactics', 'Tactics', Icons.sports_esports_rounded, Color(0xFFA78BFA), -184.0, -184.0),
+      (
+        'kubernetes',
+        'K8s',
+        Icons.settings_input_component_rounded,
+        Color(0xFF3B82F6),
+        184.0,
+        184.0
+      ),
+      (
+        'terraform',
+        'Terraform',
+        Icons.architecture_rounded,
+        Color(0xFF7C3AED),
+        0.0,
+        260.0
+      ),
+      (
+        'openings',
+        'Openings',
+        Icons.sports_esports_rounded,
+        Color(0xFF8B5CF6),
+        -260.0,
+        0.0
+      ),
+      (
+        'tactics',
+        'Tactics',
+        Icons.sports_esports_rounded,
+        Color(0xFFA78BFA),
+        -184.0,
+        -184.0
+      ),
     ];
     for (final o in outer) {
       nodes.add(_GalaxyNode(
@@ -96,7 +243,9 @@ class _GalaxyPageState extends State<GalaxyPage>
         x: cx + o.$5,
         y: cy + o.$6,
         radius: 16,
-        parentId: o.$1.contains('docker') || o.$1.contains('kubernetes') || o.$1.contains('terraform')
+        parentId: o.$1.contains('docker') ||
+                o.$1.contains('kubernetes') ||
+                o.$1.contains('terraform')
             ? 'cloud'
             : 'chess',
       ));
@@ -113,7 +262,8 @@ class _GalaxyPageState extends State<GalaxyPage>
       final ny = cy + node.y * _zoom;
       final dx = local.dx - nx;
       final dy = local.dy - ny;
-      if (dx * dx + dy * dy <= (node.radius * _zoom + 12) * (node.radius * _zoom + 12)) {
+      if (dx * dx + dy * dy <=
+          (node.radius * _zoom + 12) * (node.radius * _zoom + 12)) {
         return node;
       }
     }
@@ -130,17 +280,22 @@ class _GalaxyPageState extends State<GalaxyPage>
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
-            onPressed: () => setState(() => _zoom = (_zoom + 0.2).clamp(0.3, 3.0)),
+            onPressed: () =>
+                setState(() => _zoom = (_zoom + 0.2).clamp(0.3, 3.0)),
             tooltip: 'Zoom in',
           ),
           IconButton(
             icon: const Icon(Icons.remove_rounded),
-            onPressed: () => setState(() => _zoom = (_zoom - 0.2).clamp(0.3, 3.0)),
+            onPressed: () =>
+                setState(() => _zoom = (_zoom - 0.2).clamp(0.3, 3.0)),
             tooltip: 'Zoom out',
           ),
           IconButton(
             icon: const Icon(Icons.center_focus_strong_rounded),
-            onPressed: () => setState(() { _zoom = 1; _pan = Offset.zero; }),
+            onPressed: () => setState(() {
+              _zoom = 1;
+              _pan = Offset.zero;
+            }),
             tooltip: 'Reset view',
           ),
         ],
@@ -192,7 +347,9 @@ class _GalaxyPageState extends State<GalaxyPage>
                     .withOpacity(0.9),
                 borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                 border: Border.all(
-                    color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                    color: isDark
+                        ? DesignTokens.darkBorder
+                        : DesignTokens.lightBorder),
               ),
               child: Text('${(_zoom * 100).round()}%',
                   style: const TextStyle(
@@ -227,7 +384,9 @@ class _GalaxyPageState extends State<GalaxyPage>
                     .withOpacity(0.9),
                 borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                 border: Border.all(
-                    color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                    color: isDark
+                        ? DesignTokens.darkBorder
+                        : DesignTokens.lightBorder),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -241,7 +400,8 @@ class _GalaxyPageState extends State<GalaxyPage>
                   const SizedBox(height: 6),
                   _LegendRow(color: DesignTokens.brand, label: 'Core Memory'),
                   _LegendRow(color: const Color(0xFF0EA5E9), label: 'Topics'),
-                  _LegendRow(color: const Color(0xFF64748B), label: 'Sub-topics'),
+                  _LegendRow(
+                      color: const Color(0xFF64748B), label: 'Sub-topics'),
                 ],
               ),
             ),
@@ -284,7 +444,8 @@ class _NodeInfoPanel extends StatelessWidget {
   final VoidCallback onClose;
   final VoidCallback onExplore;
 
-  const _NodeInfoPanel({required this.node, required this.onClose, required this.onExplore});
+  const _NodeInfoPanel(
+      {required this.node, required this.onClose, required this.onExplore});
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +496,10 @@ class _NodeInfoPanel extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             ),
             child: const Text('Explore',
-                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 12)),
+                style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12)),
           ),
           const SizedBox(width: 8),
           IconButton(
@@ -355,13 +519,15 @@ class _GalaxyNode {
   final String label;
   final IconData icon;
   final Color color;
-  final double x;
-  final double y;
+  double x;
+  double y;
+  double vx = 0.0;
+  double vy = 0.0;
   final double radius;
   final bool isCenter;
   final String? parentId;
 
-  const _GalaxyNode({
+  _GalaxyNode({
     required this.id,
     required this.label,
     required this.icon,
@@ -398,11 +564,13 @@ class _GalaxyPainter extends CustomPainter {
     final cx = size.width / 2 + pan.dx;
     final cy = size.height / 2 + pan.dy;
 
-    final bgPaint = Paint()..color = isDark ? const Color(0xFF0A0F1E) : const Color(0xFFF8FAFF);
+    final bgPaint = Paint()
+      ..color = isDark ? const Color(0xFF0A0F1E) : const Color(0xFFF8FAFF);
     canvas.drawRect(Offset.zero & size, bgPaint);
 
     // Draw star field (static)
-    final starPaint = Paint()..color = (isDark ? Colors.white : Colors.black).withOpacity(0.06);
+    final starPaint = Paint()
+      ..color = (isDark ? Colors.white : Colors.black).withOpacity(0.06);
     for (int i = 0; i < 80; i++) {
       final sx = (i * 47.3 + 13.7) % size.width;
       final sy = (i * 83.1 + 29.3) % size.height;
@@ -445,7 +613,8 @@ class _GalaxyPainter extends CustomPainter {
       // Glow (pulsing for center, static for others)
       final glowRadius = node.isCenter ? r + 20 + pulse * 12 : r + 10;
       final glowPaint = Paint()
-        ..color = node.color.withOpacity(node.isCenter ? 0.15 + pulse * 0.1 : 0.1)
+        ..color =
+            node.color.withOpacity(node.isCenter ? 0.15 + pulse * 0.1 : 0.1)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
       canvas.drawCircle(pos, glowRadius, glowPaint);
 

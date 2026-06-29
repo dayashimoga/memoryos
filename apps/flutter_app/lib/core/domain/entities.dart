@@ -23,15 +23,78 @@ enum FileType {
   static FileType fromExtension(String ext) {
     final e = ext.toLowerCase().replaceFirst('.', '');
     return switch (e) {
-      'jpg' || 'jpeg' || 'png' || 'gif' || 'webp' || 'bmp' || 'tiff' || 'tif' || 'heic' || 'heif' || 'avif' || 'svg' => FileType.image,
-      'mp4' || 'mov' || 'avi' || 'mkv' || 'webm' || 'flv' || 'm4v' || 'wmv' || '3gp' => FileType.video,
-      'mp3' || 'flac' || 'wav' || 'ogg' || 'aac' || 'm4a' || 'opus' || 'wma' => FileType.audio,
+      'jpg' ||
+      'jpeg' ||
+      'png' ||
+      'gif' ||
+      'webp' ||
+      'bmp' ||
+      'tiff' ||
+      'tif' ||
+      'heic' ||
+      'heif' ||
+      'avif' ||
+      'svg' =>
+        FileType.image,
+      'mp4' ||
+      'mov' ||
+      'avi' ||
+      'mkv' ||
+      'webm' ||
+      'flv' ||
+      'm4v' ||
+      'wmv' ||
+      '3gp' =>
+        FileType.video,
+      'mp3' ||
+      'flac' ||
+      'wav' ||
+      'ogg' ||
+      'aac' ||
+      'm4a' ||
+      'opus' ||
+      'wma' =>
+        FileType.audio,
       'doc' || 'docx' || 'odt' || 'rtf' || 'pages' => FileType.document,
       'xls' || 'xlsx' || 'ods' || 'numbers' || 'csv' => FileType.spreadsheet,
       'ppt' || 'pptx' || 'odp' || 'key' => FileType.presentation,
       'pdf' => FileType.pdf,
-      'zip' || 'tar' || 'gz' || 'bz2' || 'rar' || '7z' || 'xz' || 'zst' => FileType.archive,
-      'py' || 'js' || 'ts' || 'dart' || 'rs' || 'go' || 'java' || 'kt' || 'swift' || 'c' || 'cpp' || 'h' || 'cs' || 'rb' || 'php' || 'sh' || 'bash' || 'json' || 'yaml' || 'yml' || 'toml' || 'xml' || 'html' || 'css' || 'sql' || 'tf' => FileType.code,
+      'zip' ||
+      'tar' ||
+      'gz' ||
+      'bz2' ||
+      'rar' ||
+      '7z' ||
+      'xz' ||
+      'zst' =>
+        FileType.archive,
+      'py' ||
+      'js' ||
+      'ts' ||
+      'dart' ||
+      'rs' ||
+      'go' ||
+      'java' ||
+      'kt' ||
+      'swift' ||
+      'c' ||
+      'cpp' ||
+      'h' ||
+      'cs' ||
+      'rb' ||
+      'php' ||
+      'sh' ||
+      'bash' ||
+      'json' ||
+      'yaml' ||
+      'yml' ||
+      'toml' ||
+      'xml' ||
+      'html' ||
+      'css' ||
+      'sql' ||
+      'tf' =>
+        FileType.code,
       'md' || 'mdx' || 'rst' => FileType.markdown,
       'txt' || 'log' || 'conf' || 'ini' || 'env' => FileType.text,
       'ttf' || 'otf' || 'woff' || 'woff2' => FileType.font,
@@ -40,10 +103,17 @@ enum FileType {
     };
   }
 
-  bool get isMedia => this == FileType.image || this == FileType.video || this == FileType.audio;
-  bool get isDocument => this == FileType.document || this == FileType.pdf ||
-      this == FileType.spreadsheet || this == FileType.presentation ||
-      this == FileType.markdown || this == FileType.text;
+  bool get isMedia =>
+      this == FileType.image ||
+      this == FileType.video ||
+      this == FileType.audio;
+  bool get isDocument =>
+      this == FileType.document ||
+      this == FileType.pdf ||
+      this == FileType.spreadsheet ||
+      this == FileType.presentation ||
+      this == FileType.markdown ||
+      this == FileType.text;
   bool get isCode => this == FileType.code;
 }
 
@@ -103,7 +173,8 @@ class FileEntry extends Equatable {
     final b = sizeBytes;
     if (b < 1024) return '$b B';
     if (b < 1024 * 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
-    if (b < 1024 * 1024 * 1024) return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (b < 1024 * 1024 * 1024)
+      return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
@@ -231,7 +302,8 @@ class StorageStats extends Equatable {
   String _fmt(int b) {
     if (b < 1024) return '$b B';
     if (b < 1024 * 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
-    if (b < 1024 * 1024 * 1024) return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
+    if (b < 1024 * 1024 * 1024)
+      return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
     return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 

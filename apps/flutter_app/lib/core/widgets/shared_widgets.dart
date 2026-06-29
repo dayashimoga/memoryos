@@ -100,7 +100,8 @@ class FileCardSkeleton extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const SkeletonBox(width: 48, height: 48, radius: DesignTokens.radiusMd),
+          const SkeletonBox(
+              width: 48, height: 48, radius: DesignTokens.radiusMd),
           const SizedBox(width: DesignTokens.space12),
           Expanded(
             child: Column(
@@ -112,9 +113,11 @@ class FileCardSkeleton extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const SkeletonBox(width: 52, height: 20, radius: DesignTokens.radiusXs),
+                    const SkeletonBox(
+                        width: 52, height: 20, radius: DesignTokens.radiusXs),
                     const SizedBox(width: 6),
-                    const SkeletonBox(width: 52, height: 20, radius: DesignTokens.radiusXs),
+                    const SkeletonBox(
+                        width: 52, height: 20, radius: DesignTokens.radiusXs),
                   ],
                 ),
               ],
@@ -416,8 +419,7 @@ class GradientBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveColors = colors ??
-        [DesignTokens.brand, DesignTokens.accent];
+    final effectiveColors = colors ?? [DesignTokens.brand, DesignTokens.accent];
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

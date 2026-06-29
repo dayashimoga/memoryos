@@ -51,7 +51,9 @@ class _CommandPaletteState extends State<CommandPalette> {
   List<_Command> get _filtered {
     if (_query.isEmpty) return _allCommands;
     final q = _query.toLowerCase();
-    return _allCommands.where((c) => c.label.toLowerCase().contains(q)).toList();
+    return _allCommands
+        .where((c) => c.label.toLowerCase().contains(q))
+        .toList();
   }
 
   @override
@@ -87,8 +89,8 @@ class _CommandPaletteState extends State<CommandPalette> {
         return KeyEventResult.handled;
       }
       if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        setState(() =>
-            _selectedIndex = (_selectedIndex - 1 + filtered.length) % filtered.length);
+        setState(() => _selectedIndex =
+            (_selectedIndex - 1 + filtered.length) % filtered.length);
         return KeyEventResult.handled;
       }
       if (event.logicalKey == LogicalKeyboardKey.enter && filtered.isNotEmpty) {
@@ -121,7 +123,8 @@ class _CommandPaletteState extends State<CommandPalette> {
               color: isDark ? const Color(0xFF0F172A) : Colors.white,
               borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
               border: Border.all(
-                color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+                color:
+                    isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
               ),
               boxShadow: [
                 BoxShadow(
@@ -136,17 +139,21 @@ class _CommandPaletteState extends State<CommandPalette> {
               children: [
                 // Search input
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   decoration: BoxDecoration(
                     border: Border(
                       bottom: BorderSide(
-                        color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+                        color: isDark
+                            ? DesignTokens.darkBorder
+                            : DesignTokens.lightBorder,
                       ),
                     ),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.search_rounded, color: DesignTokens.brand, size: 20),
+                      Icon(Icons.search_rounded,
+                          color: DesignTokens.brand, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: TextField(
@@ -162,10 +169,14 @@ class _CommandPaletteState extends State<CommandPalette> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: isDark ? DesignTokens.darkCard : DesignTokens.lightBg,
-                          borderRadius: BorderRadius.circular(DesignTokens.radiusSm),
+                          color: isDark
+                              ? DesignTokens.darkCard
+                              : DesignTokens.lightBg,
+                          borderRadius:
+                              BorderRadius.circular(DesignTokens.radiusSm),
                         ),
                         child: const Text('ESC',
                             style: TextStyle(
@@ -183,7 +194,8 @@ class _CommandPaletteState extends State<CommandPalette> {
                   const Padding(
                     padding: EdgeInsets.all(32),
                     child: Text('No commands found',
-                        style: TextStyle(fontFamily: 'Inter', color: Color(0xFF64748B))),
+                        style: TextStyle(
+                            fontFamily: 'Inter', color: Color(0xFF64748B))),
                   )
                 else
                   Flexible(
@@ -206,11 +218,14 @@ class _CommandPaletteState extends State<CommandPalette> {
 
                 // Footer
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
                     border: Border(
                       top: BorderSide(
-                        color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+                        color: isDark
+                            ? DesignTokens.darkBorder
+                            : DesignTokens.lightBorder,
                       ),
                     ),
                   ),
@@ -242,11 +257,11 @@ class _CommandPaletteState extends State<CommandPalette> {
               ],
             ),
           ).animate().fadeIn(duration: 150.ms).scale(
-            begin: const Offset(0.95, 0.95),
-            end: const Offset(1, 1),
-            duration: 150.ms,
-            curve: Curves.easeOutCubic,
-          ),
+                begin: const Offset(0.95, 0.95),
+                end: const Offset(1, 1),
+                duration: 150.ms,
+                curve: Curves.easeOutCubic,
+              ),
         ),
       ),
     );
@@ -258,7 +273,8 @@ class _CommandRow extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _CommandRow({required this.command, required this.selected, required this.onTap});
+  const _CommandRow(
+      {required this.command, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -295,7 +311,9 @@ class _CommandRow extends StatelessWidget {
                   fontSize: 14,
                   color: selected
                       ? DesignTokens.brand
-                      : (isDark ? const Color(0xFFCBD5E1) : const Color(0xFF1E293B)),
+                      : (isDark
+                          ? const Color(0xFFCBD5E1)
+                          : const Color(0xFF1E293B)),
                 ),
               ),
             ),
@@ -326,7 +344,8 @@ class _KeyHint extends StatelessWidget {
   final IconData? icon;
   final String? label;
 
-  const _KeyHint({this.icon, this.label}) : assert(icon != null || label != null);
+  const _KeyHint({this.icon, this.label})
+      : assert(icon != null || label != null);
 
   @override
   Widget build(BuildContext context) {

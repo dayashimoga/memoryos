@@ -42,9 +42,11 @@ class MemoryOSApp extends StatelessWidget {
                 ],
                 shortcuts: {
                   // ⌘K / Ctrl+K — command palette
-                  LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK):
+                  LogicalKeySet(
+                          LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK):
                       _CommandPaletteIntent(),
-                  LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK):
+                  LogicalKeySet(
+                          LogicalKeyboardKey.control, LogicalKeyboardKey.keyK):
                       _CommandPaletteIntent(),
                 },
                 actions: {

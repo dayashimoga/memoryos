@@ -1,3 +1,5 @@
+#![allow(unused_imports, dead_code)]
+
 //! Event-driven file system watcher using the `notify` crate.
 //!
 //! Replaces the previous polling-based watcher with OS-native file events

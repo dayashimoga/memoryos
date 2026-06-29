@@ -7,7 +7,8 @@ import 'package:memoryos/core/domain/entities.dart';
 
 abstract class FileRepository {
   Future<List<FileEntry>> getRecentFiles({int limit = 50, int offset = 0});
-  Future<List<FileEntry>> searchFiles(String query, {String? typeFilter, SearchRanking ranking = SearchRanking.relevance});
+  Future<List<FileEntry>> searchFiles(String query,
+      {String? typeFilter, SearchRanking ranking = SearchRanking.relevance});
   Future<List<FileEntry>> getFilesByTag(String tagId);
   Future<List<FileEntry>> getFilesInCollection(String collectionId);
   Future<FileEntry?> getFileById(String id);
@@ -250,87 +251,155 @@ class StorageHeatmap {
 
 class StubFileRepository implements FileRepository {
   const StubFileRepository();
-  @override Future<List<FileEntry>> getRecentFiles({int limit = 50, int offset = 0}) async => [];
-  @override Future<List<FileEntry>> searchFiles(String q, {String? typeFilter, SearchRanking ranking = SearchRanking.relevance}) async => [];
-  @override Future<List<FileEntry>> getFilesByTag(String id) async => [];
-  @override Future<List<FileEntry>> getFilesInCollection(String id) async => [];
-  @override Future<FileEntry?> getFileById(String id) async => null;
-  @override Future<StorageStats> getStorageStats() async => const StorageStats();
-  @override Future<void> toggleFavorite(String id) async {}
-  @override Future<void> deleteFile(String id) async {}
-  @override Future<List<FileEntry>> getDuplicates() async => [];
-  @override Future<List<FileEntry>> getBlurryImages() async => [];
-  @override Future<List<FileEntry>> getLargeFiles({int minSizeMb = 50}) async => [];
-  @override Future<List<FileEntry>> getFavorites() async => [];
-  @override Future<List<FileEntry>> getByDateRange(DateTime from, DateTime to) async => [];
-  @override Future<List<FileEntry>> getSimilarFiles(String fileId) async => [];
-  @override Future<void> importFile(String path) async {}
-  @override Future<void> batchDelete(List<String> ids) async {}
-  @override Future<void> batchTag(List<String> ids, List<String> tags) async {}
-  @override Future<void> batchMove(List<String> ids, String collectionId) async {}
-  @override Future<List<String>> getSearchHistory() async => [];
-  @override Future<void> saveSearchQuery(String query) async {}
-  @override Future<IndexStats> getIndexStats() async => const IndexStats();
+  @override
+  Future<List<FileEntry>> getRecentFiles(
+          {int limit = 50, int offset = 0}) async =>
+      [];
+  @override
+  Future<List<FileEntry>> searchFiles(String q,
+          {String? typeFilter,
+          SearchRanking ranking = SearchRanking.relevance}) async =>
+      [];
+  @override
+  Future<List<FileEntry>> getFilesByTag(String id) async => [];
+  @override
+  Future<List<FileEntry>> getFilesInCollection(String id) async => [];
+  @override
+  Future<FileEntry?> getFileById(String id) async => null;
+  @override
+  Future<StorageStats> getStorageStats() async => const StorageStats();
+  @override
+  Future<void> toggleFavorite(String id) async {}
+  @override
+  Future<void> deleteFile(String id) async {}
+  @override
+  Future<List<FileEntry>> getDuplicates() async => [];
+  @override
+  Future<List<FileEntry>> getBlurryImages() async => [];
+  @override
+  Future<List<FileEntry>> getLargeFiles({int minSizeMb = 50}) async => [];
+  @override
+  Future<List<FileEntry>> getFavorites() async => [];
+  @override
+  Future<List<FileEntry>> getByDateRange(DateTime from, DateTime to) async =>
+      [];
+  @override
+  Future<List<FileEntry>> getSimilarFiles(String fileId) async => [];
+  @override
+  Future<void> importFile(String path) async {}
+  @override
+  Future<void> batchDelete(List<String> ids) async {}
+  @override
+  Future<void> batchTag(List<String> ids, List<String> tags) async {}
+  @override
+  Future<void> batchMove(List<String> ids, String collectionId) async {}
+  @override
+  Future<List<String>> getSearchHistory() async => [];
+  @override
+  Future<void> saveSearchQuery(String query) async {}
+  @override
+  Future<IndexStats> getIndexStats() async => const IndexStats();
 }
 
 class StubCollectionRepository implements CollectionRepository {
   const StubCollectionRepository();
-  @override Future<List<Collection>> getAllCollections() async => [];
-  @override Future<List<Collection>> getSmartCollections() async => [];
-  @override Future<Collection?> getCollectionById(String id) async => null;
-  @override Future<void> createCollection(Collection c) async {}
-  @override Future<void> updateCollection(Collection c) async {}
-  @override Future<void> deleteCollection(String id) async {}
-  @override Future<void> addFileToCollection(String fileId, String collId) async {}
-  @override Future<void> removeFileFromCollection(String fileId, String collId) async {}
+  @override
+  Future<List<Collection>> getAllCollections() async => [];
+  @override
+  Future<List<Collection>> getSmartCollections() async => [];
+  @override
+  Future<Collection?> getCollectionById(String id) async => null;
+  @override
+  Future<void> createCollection(Collection c) async {}
+  @override
+  Future<void> updateCollection(Collection c) async {}
+  @override
+  Future<void> deleteCollection(String id) async {}
+  @override
+  Future<void> addFileToCollection(String fileId, String collId) async {}
+  @override
+  Future<void> removeFileFromCollection(String fileId, String collId) async {}
 }
 
 class StubAiRepository implements AiRepository {
   const StubAiRepository();
-  @override Future<String> summarize(String id) async => _noModel;
-  @override Future<String> explainScreenshot(String id) async => _noModel;
-  @override Future<String> explainCode(String id) async => _noModel;
-  @override Future<String> explainDiagram(String id) async => _noModel;
-  @override Future<String> chat(String msg, List<ChatMessage> hist) async => _noModel;
-  @override Future<List<Flashcard>> generateFlashcards(String id) async => [];
-  @override Future<List<String>> autoTag(String id) async => [];
-  @override Future<String> suggestTitle(String id) async => '';
-  @override Future<String> suggestFilename(String id) async => '';
-  @override Future<List<String>> getSuggestedCollections(String id) async => [];
-  @override Future<bool> isModelLoaded() async => false;
-  @override Future<List<AiModel>> getAvailableModels() async => [];
-  @override Future<void> loadModel(String path) async {}
-  static const _noModel = 'No AI model loaded. Download one from Settings → AI Models.';
+  @override
+  Future<String> summarize(String id) async => _noModel;
+  @override
+  Future<String> explainScreenshot(String id) async => _noModel;
+  @override
+  Future<String> explainCode(String id) async => _noModel;
+  @override
+  Future<String> explainDiagram(String id) async => _noModel;
+  @override
+  Future<String> chat(String msg, List<ChatMessage> hist) async => _noModel;
+  @override
+  Future<List<Flashcard>> generateFlashcards(String id) async => [];
+  @override
+  Future<List<String>> autoTag(String id) async => [];
+  @override
+  Future<String> suggestTitle(String id) async => '';
+  @override
+  Future<String> suggestFilename(String id) async => '';
+  @override
+  Future<List<String>> getSuggestedCollections(String id) async => [];
+  @override
+  Future<bool> isModelLoaded() async => false;
+  @override
+  Future<List<AiModel>> getAvailableModels() async => [];
+  @override
+  Future<void> loadModel(String path) async {}
+  static const _noModel =
+      'No AI model loaded. Download one from Settings → AI Models.';
 }
 
 class StubSearchRepository implements SearchRepository {
   const StubSearchRepository();
   @override
   Future<SearchResult> search(SearchQuery query) async => SearchResult(
-    hits: [], total: 0, elapsed: Duration.zero, query: query.text,
-  );
-  @override Future<List<String>> getSuggestions(String prefix) async => [];
-  @override Future<List<FileEntry>> findVisuallySimialar(String id) async => [];
-  @override Future<List<FileEntry>> findByColor(String hex) async => [];
+        hits: [],
+        total: 0,
+        elapsed: Duration.zero,
+        query: query.text,
+      );
+  @override
+  Future<List<String>> getSuggestions(String prefix) async => [];
+  @override
+  Future<List<FileEntry>> findVisuallySimialar(String id) async => [];
+  @override
+  Future<List<FileEntry>> findByColor(String hex) async => [];
 }
 
 class StubStorageRepository implements StorageRepository {
   const StubStorageRepository();
-  @override Future<StorageAnalysis> analyzeStorage() async => const StorageAnalysis(
-    totalBytes: 0, duplicateBytes: 0, blurryCount: 0,
-    emptyScreenshotCount: 0, largeFileCount: 0, recoverableBytes: 0,
-  );
-  @override Future<List<DuplicateGroup>> getDuplicateGroups() async => [];
-  @override Future<List<SimilarGroup>> getSimilarImageGroups() async => [];
-  @override Future<StorageHeatmap> getHeatmap() async =>
-    const StorageHeatmap(byExtension: {}, byMonth: {}, byCollection: {});
-  @override Future<void> safeDelete(List<String> ids) async {}
-  @override Future<void> secureDelete(List<String> ids) async {}
+  @override
+  Future<StorageAnalysis> analyzeStorage() async => const StorageAnalysis(
+        totalBytes: 0,
+        duplicateBytes: 0,
+        blurryCount: 0,
+        emptyScreenshotCount: 0,
+        largeFileCount: 0,
+        recoverableBytes: 0,
+      );
+  @override
+  Future<List<DuplicateGroup>> getDuplicateGroups() async => [];
+  @override
+  Future<List<SimilarGroup>> getSimilarImageGroups() async => [];
+  @override
+  Future<StorageHeatmap> getHeatmap() async =>
+      const StorageHeatmap(byExtension: {}, byMonth: {}, byCollection: {});
+  @override
+  Future<void> safeDelete(List<String> ids) async {}
+  @override
+  Future<void> secureDelete(List<String> ids) async {}
 }
 
 class StubThumbnailRepository implements ThumbnailRepository {
   const StubThumbnailRepository();
-  @override Future<Uint8List?> getThumbnail(String id, {int size = 256}) async => null;
-  @override Future<void> generateThumbnail(String id) async {}
-  @override Future<void> clearCache() async {}
+  @override
+  Future<Uint8List?> getThumbnail(String id, {int size = 256}) async => null;
+  @override
+  Future<void> generateThumbnail(String id) async {}
+  @override
+  Future<void> clearCache() async {}
 }

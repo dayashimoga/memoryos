@@ -14,7 +14,7 @@ use tracing::{debug, info};
 
 /// Compute SHA-256 hash of a file.
 pub fn sha256_file(path: &str) -> Result<String, DuplicateError> {
-    let data = std::fs::read(path).map_err(|e| DuplicateError::Io(e))?;
+    let data = std::fs::read(path).map_err(DuplicateError::Io)?;
     let mut hasher = Sha256::new();
     hasher.update(&data);
     Ok(format!("{:x}", hasher.finalize()))

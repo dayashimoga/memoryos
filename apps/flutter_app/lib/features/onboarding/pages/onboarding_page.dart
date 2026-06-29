@@ -17,25 +17,29 @@ class _OnboardingPageState extends State<OnboardingPage> {
     _OnboardingData(
       icon: Icons.memory,
       title: 'Your Personal Memory OS',
-      description: 'MemoryOS organizes all your files, screenshots, documents, and media — automatically. 100% offline.',
+      description:
+          'MemoryOS organizes all your files, screenshots, documents, and media — automatically. 100% offline.',
       color: Color(0xFF6366F1),
     ),
     _OnboardingData(
       icon: Icons.search,
       title: 'Find Anything Instantly',
-      description: 'Search in plain English. "Show me AWS notes from last week" — your AI finds it in milliseconds.',
+      description:
+          'Search in plain English. "Show me AWS notes from last week" — your AI finds it in milliseconds.',
       color: Color(0xFF8B5CF6),
     ),
     _OnboardingData(
       icon: Icons.security,
       title: 'Your Data, Your Device',
-      description: 'Zero cloud. Zero telemetry. All AI runs locally on your device with AES-256 encryption.',
+      description:
+          'Zero cloud. Zero telemetry. All AI runs locally on your device with AES-256 encryption.',
       color: Color(0xFF06B6D4),
     ),
     _OnboardingData(
       icon: Icons.auto_awesome,
       title: 'AI-Powered Intelligence',
-      description: 'Gemma, Phi, and Qwen run locally to summarize, categorize, and chat about your knowledge base.',
+      description:
+          'Gemma, Phi, and Qwen run locally to summarize, categorize, and chat about your knowledge base.',
       color: Color(0xFF10B981),
     ),
   ];
@@ -76,7 +80,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
                         height: 8,
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
-                          color: i == _currentPage ? colorScheme.primary : colorScheme.outline,
+                          color: i == _currentPage
+                              ? colorScheme.primary
+                              : colorScheme.outline,
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -124,7 +130,11 @@ class _OnboardingData {
   final String title;
   final String description;
   final Color color;
-  const _OnboardingData({required this.icon, required this.title, required this.description, required this.color});
+  const _OnboardingData(
+      {required this.icon,
+      required this.title,
+      required this.description,
+      required this.color});
 }
 
 class _OnboardingSlide extends StatelessWidget {
@@ -142,16 +152,25 @@ class _OnboardingSlide extends StatelessWidget {
             width: 120,
             height: 120,
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [data.color, data.color.withOpacity(0.6)]),
+              gradient: LinearGradient(
+                  colors: [data.color, data.color.withOpacity(0.6)]),
               borderRadius: BorderRadius.circular(30),
-              boxShadow: [BoxShadow(color: data.color.withOpacity(0.3), blurRadius: 30, spreadRadius: 5)],
+              boxShadow: [
+                BoxShadow(
+                    color: data.color.withOpacity(0.3),
+                    blurRadius: 30,
+                    spreadRadius: 5)
+              ],
             ),
             child: Icon(data.icon, color: Colors.white, size: 56),
           ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
           const SizedBox(height: 40),
           Text(
             data.title,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ).animate().fadeIn(delay: 200.ms, duration: 400.ms),
           const SizedBox(height: 16),

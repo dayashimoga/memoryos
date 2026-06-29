@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/repositories.dart';
+import 'package:memoryos/core/domain/ffi_repositories.dart';
+import 'package:memoryos/core/ffi/rust_ffi.dart';
 import 'package:memoryos/features/settings/bloc/settings_bloc.dart';
 
 /// Production service locator for MemoryOS.
@@ -41,12 +43,15 @@ class ServiceLocator {
   }) async {
     if (_initialized) return;
 
-    // Repositories (stubs unless overridden)
-    _fileRepo = fileRepo ?? const StubFileRepository();
+    // Load Rust FFI Dynamic Library
+    RustFfi.initialize();
+
+    // Repositories (stubs unless overridden, fallback internally checks availability)
+    _fileRepo = fileRepo ?? const FfiFileRepository();
     _collectionRepo = collectionRepo ?? const StubCollectionRepository();
-    _aiRepo = aiRepo ?? const StubAiRepository();
-    _searchRepo = searchRepo ?? const StubSearchRepository();
-    _storageRepo = storageRepo ?? const StubStorageRepository();
+    _aiRepo = aiRepo ?? const FfiAiRepository();
+    _searchRepo = searchRepo ?? const FfiSearchRepository();
+    _storageRepo = storageRepo ?? const FfiStorageRepository();
     _thumbnailRepo = thumbnailRepo ?? const StubThumbnailRepository();
 
     // BLoCs

@@ -33,7 +33,8 @@ class SettingsState extends Equatable {
     this.languageCode = 'en',
   });
 
-  SettingsState copyWith({ThemeMode? themeMode, String? languageCode}) => SettingsState(
+  SettingsState copyWith({ThemeMode? themeMode, String? languageCode}) =>
+      SettingsState(
         themeMode: themeMode ?? this.themeMode,
         languageCode: languageCode ?? this.languageCode,
       );

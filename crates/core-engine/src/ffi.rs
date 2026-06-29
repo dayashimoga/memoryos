@@ -1,5 +1,9 @@
 //! Extended FFI interface — v1.2 additions.
-//! Adds: storage analytics, batch operations, vault operations, tag management.
+#![allow(clippy::not_unsafe_ptr_arg_deref, unused_imports, dead_code)]
+
+//! FFI bindings for MemoryOS core engine.
+//!
+//! Provides C-compatible exports for Flutter integration.
 
 use crate::config::Config;
 use crate::database::MetadataDb;

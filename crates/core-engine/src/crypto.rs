@@ -1,3 +1,5 @@
+#![allow(unused_imports, dead_code)]
+
 //! AES-256-GCM encryption for the Secure Vault feature.
 
 use crate::error::CoreError;

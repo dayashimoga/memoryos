@@ -9,15 +9,19 @@ import 'package:memoryos/core/domain/repositories.dart';
 
 abstract class HomeEvent extends Equatable {
   const HomeEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class HomeLoadRequested extends HomeEvent {}
+
 class HomeRefreshRequested extends HomeEvent {}
+
 class HomeFileImported extends HomeEvent {
   final String path;
   const HomeFileImported(this.path);
-  @override List<Object?> get props => [path];
+  @override
+  List<Object?> get props => [path];
 }
 
 enum HomeStatus { initial, loading, loaded, error }
@@ -53,7 +57,8 @@ class HomeState extends Equatable {
       );
 
   @override
-  List<Object?> get props => [status, stats, recentFiles.length, indexStats, error];
+  List<Object?> get props =>
+      [status, stats, recentFiles.length, indexStats, error];
 }
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
@@ -84,7 +89,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  Future<void> _onFileImported(HomeFileImported event, Emitter<HomeState> emit) async {
+  Future<void> _onFileImported(
+      HomeFileImported event, Emitter<HomeState> emit) async {
     await _files.importFile(event.path);
     add(HomeRefreshRequested());
   }
@@ -96,23 +102,28 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
 abstract class SearchEvent extends Equatable {
   const SearchEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class SearchQueryChanged extends SearchEvent {
   final String query;
   const SearchQueryChanged(this.query);
-  @override List<Object?> get props => [query];
+  @override
+  List<Object?> get props => [query];
 }
 
 class SearchFilterChanged extends SearchEvent {
   final String? typeFilter;
   final SearchRanking ranking;
-  const SearchFilterChanged({this.typeFilter, this.ranking = SearchRanking.relevance});
-  @override List<Object?> get props => [typeFilter, ranking];
+  const SearchFilterChanged(
+      {this.typeFilter, this.ranking = SearchRanking.relevance});
+  @override
+  List<Object?> get props => [typeFilter, ranking];
 }
 
 class SearchCleared extends SearchEvent {}
+
 class SearchHistoryRequested extends SearchEvent {}
 
 enum SearchStatus { idle, searching, loaded, error }
@@ -158,7 +169,8 @@ class SearchState extends Equatable {
       );
 
   @override
-  List<Object?> get props => [status, query, typeFilter, ranking, result?.total];
+  List<Object?> get props =>
+      [status, query, typeFilter, ranking, result?.total];
 }
 
 class SearchBloc extends Bloc<SearchEvent, SearchState> {
@@ -178,7 +190,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   }
 
   Future<void> _onQueryChanged(
-    SearchQueryChanged event, Emitter<SearchState> emit) async {
+      SearchQueryChanged event, Emitter<SearchState> emit) async {
     final q = event.query.trim();
     if (q.isEmpty) {
       emit(state.copyWith(status: SearchStatus.idle, query: ''));
@@ -200,7 +212,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   }
 
   Future<void> _onFilterChanged(
-    SearchFilterChanged event, Emitter<SearchState> emit) async {
+      SearchFilterChanged event, Emitter<SearchState> emit) async {
     emit(state.copyWith(typeFilter: event.typeFilter, ranking: event.ranking));
     if (state.query.isNotEmpty) {
       add(SearchQueryChanged(state.query));
@@ -212,7 +224,7 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
   }
 
   Future<void> _onHistoryRequested(
-    SearchHistoryRequested event, Emitter<SearchState> emit) async {
+      SearchHistoryRequested event, Emitter<SearchState> emit) async {
     final history = await _files.getSearchHistory();
     emit(state.copyWith(history: history));
   }
@@ -224,15 +236,18 @@ class SearchBloc extends Bloc<SearchEvent, SearchState> {
 
 abstract class StorageEvent extends Equatable {
   const StorageEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class StorageScanRequested extends StorageEvent {}
+
 class StorageDeleteRequested extends StorageEvent {
   final List<String> ids;
   final bool secure;
   const StorageDeleteRequested(this.ids, {this.secure = false});
-  @override List<Object?> get props => [ids, secure];
+  @override
+  List<Object?> get props => [ids, secure];
 }
 
 enum StorageStatus { idle, scanning, loaded, deleting, error }
@@ -254,8 +269,7 @@ class StorageState extends Equatable {
     this.error,
   });
 
-  int get totalRecoverableBytes =>
-      analysis?.recoverableBytes ?? 0;
+  int get totalRecoverableBytes => analysis?.recoverableBytes ?? 0;
 
   StorageState copyWith({
     StorageStatus? status,
@@ -275,7 +289,8 @@ class StorageState extends Equatable {
       );
 
   @override
-  List<Object?> get props => [status, analysis?.recoverableBytes, duplicates.length];
+  List<Object?> get props =>
+      [status, analysis?.recoverableBytes, duplicates.length];
 }
 
 class StorageBloc extends Bloc<StorageEvent, StorageState> {
@@ -286,7 +301,8 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
     on<StorageDeleteRequested>(_onDelete);
   }
 
-  Future<void> _onScan(StorageScanRequested event, Emitter<StorageState> emit) async {
+  Future<void> _onScan(
+      StorageScanRequested event, Emitter<StorageState> emit) async {
     emit(state.copyWith(status: StorageStatus.scanning));
     try {
       final results = await Future.wait([
@@ -307,7 +323,8 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
     }
   }
 
-  Future<void> _onDelete(StorageDeleteRequested event, Emitter<StorageState> emit) async {
+  Future<void> _onDelete(
+      StorageDeleteRequested event, Emitter<StorageState> emit) async {
     emit(state.copyWith(status: StorageStatus.deleting));
     try {
       if (event.secure) {
@@ -328,34 +345,45 @@ class StorageBloc extends Bloc<StorageEvent, StorageState> {
 
 abstract class AiEvent extends Equatable {
   const AiEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class AiCheckModel extends AiEvent {}
+
 class AiSendMessage extends AiEvent {
   final String message;
   const AiSendMessage(this.message);
-  @override List<Object?> get props => [message];
+  @override
+  List<Object?> get props => [message];
 }
+
 class AiSummarizeFile extends AiEvent {
   final String fileId;
   const AiSummarizeFile(this.fileId);
-  @override List<Object?> get props => [fileId];
+  @override
+  List<Object?> get props => [fileId];
 }
+
 class AiExplainFile extends AiEvent {
   final String fileId;
   final AiExplainMode mode;
   const AiExplainFile(this.fileId, this.mode);
-  @override List<Object?> get props => [fileId, mode];
+  @override
+  List<Object?> get props => [fileId, mode];
 }
+
 class AiGenerateFlashcards extends AiEvent {
   final String fileId;
   const AiGenerateFlashcards(this.fileId);
-  @override List<Object?> get props => [fileId];
+  @override
+  List<Object?> get props => [fileId];
 }
+
 class AiClearConversation extends AiEvent {}
 
 enum AiExplainMode { screenshot, code, diagram }
+
 enum AiStatus { idle, checking, ready, noModel, thinking, error }
 
 class AiState extends Equatable {
@@ -393,7 +421,8 @@ class AiState extends Equatable {
       );
 
   @override
-  List<Object?> get props => [status, modelLoaded, messages.length, flashcards.length];
+  List<Object?> get props =>
+      [status, modelLoaded, messages.length, flashcards.length];
 }
 
 class AiBloc extends Bloc<AiEvent, AiState> {
@@ -417,7 +446,8 @@ class AiBloc extends Bloc<AiEvent, AiState> {
     ));
   }
 
-  Future<void> _onSendMessage(AiSendMessage event, Emitter<AiState> emit) async {
+  Future<void> _onSendMessage(
+      AiSendMessage event, Emitter<AiState> emit) async {
     final userMsg = ChatMessage(role: 'user', content: event.message);
     final messages = [...state.messages, userMsg];
     emit(state.copyWith(status: AiStatus.thinking, messages: messages));
@@ -433,7 +463,8 @@ class AiBloc extends Bloc<AiEvent, AiState> {
     }
   }
 
-  Future<void> _onSummarize(AiSummarizeFile event, Emitter<AiState> emit) async {
+  Future<void> _onSummarize(
+      AiSummarizeFile event, Emitter<AiState> emit) async {
     emit(state.copyWith(status: AiStatus.thinking));
     try {
       final summary = await _ai.summarize(event.fileId);
@@ -462,7 +493,7 @@ class AiBloc extends Bloc<AiEvent, AiState> {
   }
 
   Future<void> _onGenerateFlashcards(
-    AiGenerateFlashcards event, Emitter<AiState> emit) async {
+      AiGenerateFlashcards event, Emitter<AiState> emit) async {
     emit(state.copyWith(status: AiStatus.thinking));
     try {
       final cards = await _ai.generateFlashcards(event.fileId);
@@ -483,19 +514,24 @@ class AiBloc extends Bloc<AiEvent, AiState> {
 
 abstract class CollectionsEvent extends Equatable {
   const CollectionsEvent();
-  @override List<Object?> get props => [];
+  @override
+  List<Object?> get props => [];
 }
 
 class CollectionsLoadRequested extends CollectionsEvent {}
+
 class CollectionCreated extends CollectionsEvent {
   final String name;
   const CollectionCreated(this.name);
-  @override List<Object?> get props => [name];
+  @override
+  List<Object?> get props => [name];
 }
+
 class CollectionDeleted extends CollectionsEvent {
   final String id;
   const CollectionDeleted(this.id);
-  @override List<Object?> get props => [id];
+  @override
+  List<Object?> get props => [id];
 }
 
 enum CollectionsStatus { initial, loading, loaded, error }
@@ -539,7 +575,8 @@ class CollectionsBloc extends Bloc<CollectionsEvent, CollectionsState> {
     on<CollectionDeleted>(_onDelete);
   }
 
-  Future<void> _onLoad(CollectionsLoadRequested event, Emitter<CollectionsState> emit) async {
+  Future<void> _onLoad(
+      CollectionsLoadRequested event, Emitter<CollectionsState> emit) async {
     emit(state.copyWith(status: CollectionsStatus.loading));
     try {
       final results = await Future.wait([
@@ -552,11 +589,13 @@ class CollectionsBloc extends Bloc<CollectionsEvent, CollectionsState> {
         manual: results[1] as List<Collection>,
       ));
     } catch (e) {
-      emit(state.copyWith(status: CollectionsStatus.error, error: e.toString()));
+      emit(
+          state.copyWith(status: CollectionsStatus.error, error: e.toString()));
     }
   }
 
-  Future<void> _onCreate(CollectionCreated event, Emitter<CollectionsState> emit) async {
+  Future<void> _onCreate(
+      CollectionCreated event, Emitter<CollectionsState> emit) async {
     final collection = Collection(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       name: event.name,
@@ -567,7 +606,8 @@ class CollectionsBloc extends Bloc<CollectionsEvent, CollectionsState> {
     add(CollectionsLoadRequested());
   }
 
-  Future<void> _onDelete(CollectionDeleted event, Emitter<CollectionsState> emit) async {
+  Future<void> _onDelete(
+      CollectionDeleted event, Emitter<CollectionsState> emit) async {
     await _repo.deleteCollection(event.id);
     add(CollectionsLoadRequested());
   }
@@ -576,9 +616,9 @@ class CollectionsBloc extends Bloc<CollectionsEvent, CollectionsState> {
 // Helper extension for debounce (requires rxdart or manual impl)
 extension on Stream {
   Stream<T> debounce<T>(Duration d) =>
-    cast<T>().transform(StreamTransformer.fromHandlers(
-      handleData: (data, sink) => sink.add(data),
-    ));
+      cast<T>().transform(StreamTransformer.fromHandlers(
+        handleData: (data, sink) => sink.add(data),
+      ));
   Stream<T> switchMap<T>(Stream<T> Function(dynamic) mapper) =>
-    asyncExpand(mapper);
+      asyncExpand(mapper);
 }

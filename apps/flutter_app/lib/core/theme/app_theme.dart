@@ -9,21 +9,21 @@ import 'package:flutter/cupertino.dart';
 /// and adaptive density.
 abstract class DesignTokens {
   // ── Color Palette ──────────────────────────────────────────────────────────
-  static const brand = Color(0xFF6366F1);       // Indigo-500
-  static const brandDark = Color(0xFF4F46E5);   // Indigo-600
-  static const accent = Color(0xFF8B5CF6);      // Violet-500
-  static const tertiary = Color(0xFF06B6D4);    // Cyan-500
-  static const success = Color(0xFF10B981);     // Emerald-500
-  static const warning = Color(0xFFF59E0B);     // Amber-500
-  static const error = Color(0xFFEF4444);       // Red-500
-  static const info = Color(0xFF3B82F6);        // Blue-500
+  static const brand = Color(0xFF6366F1); // Indigo-500
+  static const brandDark = Color(0xFF4F46E5); // Indigo-600
+  static const accent = Color(0xFF8B5CF6); // Violet-500
+  static const tertiary = Color(0xFF06B6D4); // Cyan-500
+  static const success = Color(0xFF10B981); // Emerald-500
+  static const warning = Color(0xFFF59E0B); // Amber-500
+  static const error = Color(0xFFEF4444); // Red-500
+  static const info = Color(0xFF3B82F6); // Blue-500
 
   // ── Surface Colors (dark) ─────────────────────────────────────────────────
-  static const darkBg = Color(0xFF080B14);      // True dark — deeper than slate
+  static const darkBg = Color(0xFF080B14); // True dark — deeper than slate
   static const darkSurface = Color(0xFF0F1624); // Base surface
-  static const darkCard = Color(0xFF161D2E);    // Elevated card
+  static const darkCard = Color(0xFF161D2E); // Elevated card
   static const darkOverlay = Color(0xFF1C2438); // Modal/overlay
-  static const darkBorder = Color(0xFF252F47);  // Subtle border
+  static const darkBorder = Color(0xFF252F47); // Subtle border
 
   // ── Surface Colors (light) ────────────────────────────────────────────────
   static const lightBg = Color(0xFFF8FAFC);
@@ -147,8 +147,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
-          borderSide:
-              BorderSide(color: base.primary, width: 2),
+          borderSide: BorderSide(color: base.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: DesignTokens.space16,
@@ -404,9 +403,8 @@ class AppTheme {
   }
 
   static TextTheme _buildTextTheme(Brightness brightness) {
-    final baseColor = brightness == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF0F172A);
+    final baseColor =
+        brightness == Brightness.dark ? Colors.white : const Color(0xFF0F172A);
     final mutedColor = brightness == Brightness.dark
         ? const Color(0xFF94A3B8)
         : const Color(0xFF64748B);

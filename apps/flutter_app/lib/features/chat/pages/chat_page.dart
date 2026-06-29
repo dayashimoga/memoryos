@@ -150,16 +150,17 @@ class _ChatViewState extends State<_ChatView> {
       body: Column(
         children: [
           // No model banner
-          if (state.status == AiStatus.noModel)
-            _ModelBanner(),
+          if (state.status == AiStatus.noModel) _ModelBanner(),
 
           // Messages
           Expanded(
             child: state.messages.isEmpty
-                ? _WelcomeView(prompts: _quickPrompts, onSelect: (p) {
-                    _controller.text = p;
-                    _send();
-                  })
+                ? _WelcomeView(
+                    prompts: _quickPrompts,
+                    onSelect: (p) {
+                      _controller.text = p;
+                      _send();
+                    })
                 : ListView.builder(
                     controller: _scrollController,
                     padding: const EdgeInsets.all(16),
@@ -187,20 +188,24 @@ class _ChatViewState extends State<_ChatView> {
               height: 44,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 physics: const BouncingScrollPhysics(),
-                children: _quickPrompts.map((p) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ActionChip(
-                    avatar: Icon(p.$2, size: 14),
-                    label: Text(p.$1,
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                    onPressed: () {
-                      _controller.text = p.$1;
-                      _send();
-                    },
-                  ),
-                )).toList(),
+                children: _quickPrompts
+                    .map((p) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ActionChip(
+                            avatar: Icon(p.$2, size: 14),
+                            label: Text(p.$1,
+                                style: const TextStyle(
+                                    fontFamily: 'Inter', fontSize: 12)),
+                            onPressed: () {
+                              _controller.text = p.$1;
+                              _send();
+                            },
+                          ),
+                        ))
+                    .toList(),
               ),
             ),
 
@@ -208,10 +213,13 @@ class _ChatViewState extends State<_ChatView> {
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             decoration: BoxDecoration(
-              color: isDark ? DesignTokens.darkSurface : DesignTokens.lightSurface,
+              color:
+                  isDark ? DesignTokens.darkSurface : DesignTokens.lightSurface,
               border: Border(
                 top: BorderSide(
-                  color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+                  color: isDark
+                      ? DesignTokens.darkBorder
+                      : DesignTokens.lightBorder,
                 ),
               ),
             ),
@@ -224,8 +232,11 @@ class _ChatViewState extends State<_ChatView> {
                     child: Container(
                       constraints: const BoxConstraints(maxHeight: 120),
                       decoration: BoxDecoration(
-                        color: isDark ? DesignTokens.darkCard : DesignTokens.lightBg,
-                        borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
+                        color: isDark
+                            ? DesignTokens.darkCard
+                            : DesignTokens.lightBg,
+                        borderRadius:
+                            BorderRadius.circular(DesignTokens.radiusXl),
                         border: Border.all(
                             color: isDark
                                 ? DesignTokens.darkBorder
@@ -266,10 +277,14 @@ class _ChatViewState extends State<_ChatView> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: state.status == AiStatus.thinking
-                              ? [const Color(0xFF94A3B8), const Color(0xFF64748B)]
+                              ? [
+                                  const Color(0xFF94A3B8),
+                                  const Color(0xFF64748B)
+                                ]
                               : [DesignTokens.brand, DesignTokens.accent],
                         ),
-                        borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                        borderRadius:
+                            BorderRadius.circular(DesignTokens.radiusFull),
                         boxShadow: [
                           BoxShadow(
                             color: DesignTokens.brand.withOpacity(
@@ -312,13 +327,16 @@ class _ModelBanner extends StatelessWidget {
       color: DesignTokens.warning.withOpacity(0.08),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, size: 16, color: DesignTokens.warning),
+          const Icon(Icons.warning_amber_rounded,
+              size: 16, color: DesignTokens.warning),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'No AI model loaded — responses are powered by fallback logic',
               style: const TextStyle(
-                  fontFamily: 'Inter', fontSize: 12, color: DesignTokens.warning),
+                  fontFamily: 'Inter',
+                  fontSize: 12,
+                  color: DesignTokens.warning),
             ),
           ),
           TextButton(
@@ -405,7 +423,9 @@ class _MessageBubble extends StatelessWidget {
               decoration: BoxDecoration(
                 color: isUser
                     ? DesignTokens.brand
-                    : (isDark ? DesignTokens.darkCard : DesignTokens.lightSurface),
+                    : (isDark
+                        ? DesignTokens.darkCard
+                        : DesignTokens.lightSurface),
                 borderRadius:
                     BorderRadius.circular(DesignTokens.radiusLg).copyWith(
                   bottomRight: isUser ? const Radius.circular(4) : null,
@@ -466,7 +486,9 @@ class _TypingBubble extends StatelessWidget {
               borderRadius: BorderRadius.circular(DesignTokens.radiusLg)
                   .copyWith(bottomLeft: const Radius.circular(4)),
               border: Border.all(
-                  color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+                  color: isDark
+                      ? DesignTokens.darkBorder
+                      : DesignTokens.lightBorder),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

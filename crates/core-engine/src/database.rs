@@ -1,3 +1,5 @@
+#![allow(unused_imports, dead_code)]
+
 //! SQLite database layer for MemoryOS metadata storage.
 
 use crate::error::CoreError;
@@ -75,7 +77,7 @@ impl MetadataDb {
         let result = self.conn.query_row(
             "SELECT * FROM files WHERE id = ?1",
             params![id.to_string()],
-            |row| Self::row_to_file_entry(row),
+            Self::row_to_file_entry,
         );
         match result {
             Ok(entry) => Ok(Some(entry)),
@@ -88,7 +90,7 @@ impl MetadataDb {
         let result = self.conn.query_row(
             "SELECT * FROM files WHERE path = ?1",
             params![path],
-            |row| Self::row_to_file_entry(row),
+            Self::row_to_file_entry,
         );
         match result {
             Ok(entry) => Ok(Some(entry)),
@@ -102,9 +104,10 @@ impl MetadataDb {
             .conn
             .prepare("SELECT * FROM files ORDER BY created_at DESC LIMIT ?1 OFFSET ?2")?;
         let entries = stmt
-            .query_map(params![limit as i64, offset as i64], |row| {
-                Self::row_to_file_entry(row)
-            })?
+            .query_map(
+                params![limit as i64, offset as i64],
+                Self::row_to_file_entry,
+            )?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(entries)
     }
@@ -117,7 +120,7 @@ impl MetadataDb {
         )?;
         let pattern = format!("%{}%", query);
         let entries = stmt
-            .query_map(params![pattern], |row| Self::row_to_file_entry(row))?
+            .query_map(params![pattern], Self::row_to_file_entry)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(entries)
     }
@@ -168,7 +171,7 @@ impl MetadataDb {
             .conn
             .prepare("SELECT * FROM files WHERE is_encrypted = 1 ORDER BY modified_at DESC")?;
         let entries = stmt
-            .query_map([], |row| Self::row_to_file_entry(row))?
+            .query_map([], Self::row_to_file_entry)?
             .collect::<Result<Vec<_>, _>>()?;
         Ok(entries)
     }

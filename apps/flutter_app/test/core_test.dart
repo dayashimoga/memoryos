@@ -223,7 +223,8 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('does not render button when actionLabel is null', (tester) async {
+    testWidgets('does not render button when actionLabel is null',
+        (tester) async {
       await tester.pumpWidget(_wrap(const EmptyStateWidget(
         icon: Icons.inbox_rounded,
         title: 'Title',
@@ -254,7 +255,8 @@ void main() {
 
   group('SectionHeader', () {
     testWidgets('renders title', (tester) async {
-      await tester.pumpWidget(_wrap(const SectionHeader(title: 'Recent Files')));
+      await tester
+          .pumpWidget(_wrap(const SectionHeader(title: 'Recent Files')));
       expect(find.text('Recent Files'), findsOneWidget);
     });
 
@@ -333,7 +335,8 @@ void main() {
     );
 
     test('SettingsState copyWith preserves other fields', () {
-      const original = SettingsState(themeMode: ThemeMode.dark, languageCode: 'de');
+      const original =
+          SettingsState(themeMode: ThemeMode.dark, languageCode: 'de');
       final updated = original.copyWith(themeMode: ThemeMode.light);
       expect(updated.languageCode, 'de');
       expect(updated.themeMode, ThemeMode.light);

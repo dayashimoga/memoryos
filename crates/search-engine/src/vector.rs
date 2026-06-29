@@ -8,13 +8,13 @@ use tracing::warn;
 pub const EMBEDDING_DIM: usize = 384;
 
 pub struct VectorSearcher {
-    db_path: String,
+    _db_path: String,
 }
 
 impl VectorSearcher {
     pub fn new(db_path: &str) -> Result<Self, SearchError> {
         Ok(Self {
-            db_path: db_path.to_string(),
+            _db_path: db_path.to_string(),
         })
     }
 
@@ -22,7 +22,7 @@ impl VectorSearcher {
     pub async fn search_similar(
         &self,
         query_text: &str,
-        limit: usize,
+        _limit: usize,
     ) -> Result<Vec<SearchResultItem>, SearchError> {
         // In production: embed query_text → vector → sqlite-vec KNN search
         // sqlite-vec is loaded as a SQLite extension at runtime:
@@ -43,7 +43,7 @@ impl VectorSearcher {
     pub async fn insert_embedding(
         &self,
         file_id: &str,
-        embedding: &[f32; EMBEDDING_DIM],
+        _embedding: &[f32; EMBEDDING_DIM],
     ) -> Result<i64, SearchError> {
         // Production: INSERT INTO vec_items (file_id, embedding) VALUES (?, ?)
         // using the sqlite-vec binary format.
