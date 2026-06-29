@@ -310,3 +310,135 @@ pub extern "C" fn memoryos_vault_list() -> *mut c_char {
         None => cstring_or_empty("[]"),
     }
 }
+
+// ── Toolbox utilities ──────────────────────────────────────────────────────────
+
+/// Convert document format (PDF, DOCX, Markdown, HTML, TXT, EPUB).
+#[no_mangle]
+pub extern "C" fn memoryos_convert_document(
+    input_path: *const c_char,
+    output_path: *const c_char,
+) -> c_int {
+    let in_p = unsafe { str_from_ptr(input_path) }.unwrap_or("");
+    let out_p = unsafe { str_from_ptr(output_path) }.unwrap_or("");
+
+    match crate::toolbox::convert_document(in_p, out_p) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// Process image (resize, format conversion, quality compression).
+#[no_mangle]
+pub extern "C" fn memoryos_process_image(
+    input_path: *const c_char,
+    output_path: *const c_char,
+    width: c_int,
+    height: c_int,
+    quality: c_int,
+) -> c_int {
+    let in_p = unsafe { str_from_ptr(input_path) }.unwrap_or("");
+    let out_p = unsafe { str_from_ptr(output_path) }.unwrap_or("");
+
+    match crate::toolbox::process_image(in_p, out_p, width as u32, height as u32, quality as u8) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// Normalize WAV audio file to maximum level.
+#[no_mangle]
+pub extern "C" fn memoryos_normalize_wav(
+    input_path: *const c_char,
+    output_path: *const c_char,
+) -> c_int {
+    let in_p = unsafe { str_from_ptr(input_path) }.unwrap_or("");
+    let out_p = unsafe { str_from_ptr(output_path) }.unwrap_or("");
+
+    match crate::toolbox::normalize_wav(in_p, out_p) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// List archive zip entries as JSON.
+#[no_mangle]
+pub extern "C" fn memoryos_archive_list(archive_path: *const c_char) -> *mut c_char {
+    let path = unsafe { str_from_ptr(archive_path) }.unwrap_or("");
+    match crate::toolbox::list_archive(path) {
+        Ok(items) => {
+            let json = serde_json::to_string(&items).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        Err(_) => cstring_or_empty("[]"),
+    }
+}
+
+/// Create a new zip archive containing the listed files (newline separated paths).
+#[no_mangle]
+pub extern "C" fn memoryos_archive_create(
+    output_path: *const c_char,
+    paths_newline_separated: *const c_char,
+) -> c_int {
+    let out_p = unsafe { str_from_ptr(output_path) }.unwrap_or("");
+    let paths_str = unsafe { str_from_ptr(paths_newline_separated) }.unwrap_or("");
+    let paths: Vec<String> = paths_str
+        .lines()
+        .filter(|l| !l.is_empty())
+        .map(String::from)
+        .collect();
+
+    match crate::toolbox::create_archive(out_p, paths) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// Extract zip archive to output folder.
+#[no_mangle]
+pub extern "C" fn memoryos_archive_extract(
+    archive_path: *const c_char,
+    output_dir: *const c_char,
+) -> c_int {
+    let archive_p = unsafe { str_from_ptr(archive_path) }.unwrap_or("");
+    let out_dir = unsafe { str_from_ptr(output_dir) }.unwrap_or("");
+
+    match crate::toolbox::extract_archive(archive_p, out_dir) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// Perform incremental password-encrypted backup of data_dir.
+#[no_mangle]
+pub extern "C" fn memoryos_backup_perform(
+    data_dir: *const c_char,
+    backup_path: *const c_char,
+    key_phrase: *const c_char,
+) -> c_int {
+    let d_dir = unsafe { str_from_ptr(data_dir) }.unwrap_or("");
+    let b_path = unsafe { str_from_ptr(backup_path) }.unwrap_or("");
+    let key = unsafe { str_from_ptr(key_phrase) }.unwrap_or("");
+
+    match crate::toolbox::perform_backup(d_dir, b_path, key) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+/// Restore password-encrypted backup into data_dir.
+#[no_mangle]
+pub extern "C" fn memoryos_backup_restore(
+    backup_path: *const c_char,
+    data_dir: *const c_char,
+    key_phrase: *const c_char,
+) -> c_int {
+    let b_path = unsafe { str_from_ptr(backup_path) }.unwrap_or("");
+    let d_dir = unsafe { str_from_ptr(data_dir) }.unwrap_or("");
+    let key = unsafe { str_from_ptr(key_phrase) }.unwrap_or("");
+
+    match crate::toolbox::restore_backup(b_path, d_dir, key) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}

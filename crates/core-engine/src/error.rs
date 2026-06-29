@@ -31,3 +31,9 @@ pub enum CoreError {
     #[error("Internal error: {0}")]
     Internal(String),
 }
+
+impl From<zip::result::ZipError> for CoreError {
+    fn from(err: zip::result::ZipError) -> Self {
+        CoreError::Internal(err.to_string())
+    }
+}

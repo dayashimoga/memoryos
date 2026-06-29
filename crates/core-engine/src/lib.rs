@@ -11,6 +11,7 @@ pub mod ffi;
 pub mod file_monitor;
 pub mod metadata;
 pub mod models;
+pub mod toolbox;
 
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 

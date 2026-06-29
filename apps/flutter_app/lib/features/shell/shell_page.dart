@@ -63,6 +63,11 @@ const _destinations = [
       label: 'Inbox',
       path: '/inbox'),
   NavDestination(
+      icon: Icons.construction_outlined,
+      activeIcon: Icons.construction_rounded,
+      label: 'Toolbox',
+      path: '/toolbox'),
+  NavDestination(
       icon: Icons.storage_outlined,
       activeIcon: Icons.storage_rounded,
       label: 'Storage',

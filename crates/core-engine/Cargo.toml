@@ -30,6 +30,8 @@ getrandom = "0.2"
 notify = { version = "6.1", features = ["serde"] }
 rayon = "1.8"
 crossbeam-channel = "0.5"
+zip = { workspace = true }
+image = "0.24"
 
 [dev-dependencies]
 proptest = { workspace = true }

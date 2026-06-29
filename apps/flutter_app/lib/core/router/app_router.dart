@@ -15,6 +15,7 @@ import 'package:memoryos/features/learning/pages/learning_page.dart';
 import 'package:memoryos/features/shell/shell_page.dart';
 import 'package:memoryos/features/inbox/pages/inbox_page.dart';
 import 'package:memoryos/features/galaxy/pages/galaxy_page.dart';
+import 'package:memoryos/features/toolbox/pages/toolbox_page.dart';
 
 /// Application router — GoRouter ShellRoute with all v1.2 feature routes.
 class AppRouter {
@@ -79,6 +80,10 @@ class AppRouter {
           GoRoute(
             path: '/inbox',
             builder: (context, state) => const InboxPage(),
+          ),
+          GoRoute(
+            path: '/toolbox',
+            builder: (context, state) => const ToolboxPage(),
           ),
           GoRoute(
             path: '/galaxy',

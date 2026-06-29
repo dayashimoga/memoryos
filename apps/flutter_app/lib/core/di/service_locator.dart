@@ -19,6 +19,7 @@ class ServiceLocator {
   static late final SearchRepository _searchRepo;
   static late final StorageRepository _storageRepo;
   static late final ThumbnailRepository _thumbnailRepo;
+  static late final ToolboxRepository _toolboxRepo;
 
   // BLoC singletons
   static late final SettingsBloc _settingsBloc;
@@ -40,6 +41,7 @@ class ServiceLocator {
     SearchRepository? searchRepo,
     StorageRepository? storageRepo,
     ThumbnailRepository? thumbnailRepo,
+    ToolboxRepository? toolboxRepo,
   }) async {
     if (_initialized) return;
 
@@ -53,6 +55,7 @@ class ServiceLocator {
     _searchRepo = searchRepo ?? const FfiSearchRepository();
     _storageRepo = storageRepo ?? const FfiStorageRepository();
     _thumbnailRepo = thumbnailRepo ?? const StubThumbnailRepository();
+    _toolboxRepo = toolboxRepo ?? const FfiToolboxRepository();
 
     // BLoCs
     _settingsBloc = SettingsBloc();
@@ -76,6 +79,7 @@ class ServiceLocator {
   static SearchRepository get searchRepo => _searchRepo;
   static StorageRepository get storageRepo => _storageRepo;
   static ThumbnailRepository get thumbnailRepo => _thumbnailRepo;
+  static ToolboxRepository get toolboxRepo => _toolboxRepo;
 
   static SettingsBloc get settingsBloc => _settingsBloc;
   static HomeBloc get homeBloc => _homeBloc;

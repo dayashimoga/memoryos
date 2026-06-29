@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:memoryos/core/domain/entities.dart';
+import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 import 'package:memoryos/features/settings/bloc/settings_bloc.dart';
@@ -390,6 +391,32 @@ void main() {
         updatedAt: DateTime(2024),
       );
       expect(a, equals(b));
+    });
+  });
+
+  group('Toolbox & ArchiveItem', () {
+    test('ArchiveItem parsing', () {
+      final json = {
+        'name': 'test.txt',
+        'size': 1234,
+        'is_dir': false,
+      };
+      final item = ArchiveItem.fromJson(json);
+      expect(item.name, 'test.txt');
+      expect(item.size, 1234);
+      expect(item.isDir, isFalse);
+    });
+
+    test('StubToolboxRepository defaults to true / empty', () async {
+      const repo = StubToolboxRepository();
+      expect(await repo.convertDocument('a', 'b'), isTrue);
+      expect(await repo.processImage('a', 'b', 1, 1, 1), isTrue);
+      expect(await repo.normalizeWav('a', 'b'), isTrue);
+      expect(await repo.listArchive('a'), isEmpty);
+      expect(await repo.createArchive('a', []), isTrue);
+      expect(await repo.extractArchive('a', 'b'), isTrue);
+      expect(await repo.performBackup('a', 'b', 'c'), isTrue);
+      expect(await repo.restoreBackup('a', 'b', 'c'), isTrue);
     });
   });
 }

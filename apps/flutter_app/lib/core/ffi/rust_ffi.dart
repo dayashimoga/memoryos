@@ -46,6 +46,44 @@ typedef VaultRemoveDart = int Function(Pointer<Utf8> id);
 typedef VaultListFunc = Pointer<Utf8> Function();
 typedef VaultListDart = Pointer<Utf8> Function();
 
+typedef ConvertDocFunc = Int32 Function(
+    Pointer<Utf8> inputPath, Pointer<Utf8> outputPath);
+typedef ConvertDocDart = int Function(
+    Pointer<Utf8> inputPath, Pointer<Utf8> outputPath);
+
+typedef ProcessImageFunc = Int32 Function(Pointer<Utf8> inputPath,
+    Pointer<Utf8> outputPath, Int32 width, Int32 height, Int32 quality);
+typedef ProcessImageDart = int Function(Pointer<Utf8> inputPath,
+    Pointer<Utf8> outputPath, int width, int height, int quality);
+
+typedef NormalizeWavFunc = Int32 Function(
+    Pointer<Utf8> inputPath, Pointer<Utf8> outputPath);
+typedef NormalizeWavDart = int Function(
+    Pointer<Utf8> inputPath, Pointer<Utf8> outputPath);
+
+typedef ArchiveListFunc = Pointer<Utf8> Function(Pointer<Utf8> archivePath);
+typedef ArchiveListDart = Pointer<Utf8> Function(Pointer<Utf8> archivePath);
+
+typedef ArchiveCreateFunc = Int32 Function(
+    Pointer<Utf8> outputPath, Pointer<Utf8> paths);
+typedef ArchiveCreateDart = int Function(
+    Pointer<Utf8> outputPath, Pointer<Utf8> paths);
+
+typedef ArchiveExtractFunc = Int32 Function(
+    Pointer<Utf8> archivePath, Pointer<Utf8> outputDir);
+typedef ArchiveExtractDart = int Function(
+    Pointer<Utf8> archivePath, Pointer<Utf8> outputDir);
+
+typedef BackupPerformFunc = Int32 Function(
+    Pointer<Utf8> dataDir, Pointer<Utf8> backupPath, Pointer<Utf8> keyPhrase);
+typedef BackupPerformDart = int Function(
+    Pointer<Utf8> dataDir, Pointer<Utf8> backupPath, Pointer<Utf8> keyPhrase);
+
+typedef BackupRestoreFunc = Int32 Function(
+    Pointer<Utf8> backupPath, Pointer<Utf8> dataDir, Pointer<Utf8> keyPhrase);
+typedef BackupRestoreDart = int Function(
+    Pointer<Utf8> backupPath, Pointer<Utf8> dataDir, Pointer<Utf8> keyPhrase);
+
 class RustFfi {
   static DynamicLibrary? _lib;
   static bool _loadFailed = false;
@@ -65,6 +103,15 @@ class RustFfi {
   static VaultAddDart? _vaultAdd;
   static VaultRemoveDart? _vaultRemove;
   static VaultListDart? _vaultList;
+
+  static ConvertDocDart? _convertDocument;
+  static ProcessImageDart? _processImage;
+  static NormalizeWavDart? _normalizeWav;
+  static ArchiveListDart? _archiveList;
+  static ArchiveCreateDart? _archiveCreate;
+  static ArchiveExtractDart? _archiveExtract;
+  static BackupPerformDart? _backupPerform;
+  static BackupRestoreDart? _backupRestore;
 
   static void initialize() {
     if (kIsWeb) {
@@ -107,6 +154,27 @@ class RustFfi {
           'memoryos_vault_remove');
       _vaultList = _lib!
           .lookupFunction<VaultListFunc, VaultListDart>('memoryos_vault_list');
+
+      _convertDocument = _lib!.lookupFunction<ConvertDocFunc, ConvertDocDart>(
+          'memoryos_convert_document');
+      _processImage = _lib!.lookupFunction<ProcessImageFunc, ProcessImageDart>(
+          'memoryos_process_image');
+      _normalizeWav = _lib!.lookupFunction<NormalizeWavFunc, NormalizeWavDart>(
+          'memoryos_normalize_wav');
+      _archiveList = _lib!.lookupFunction<ArchiveListFunc, ArchiveListDart>(
+          'memoryos_archive_list');
+      _archiveCreate = _lib!
+          .lookupFunction<ArchiveCreateFunc, ArchiveCreateDart>(
+              'memoryos_archive_create');
+      _archiveExtract = _lib!
+          .lookupFunction<ArchiveExtractFunc, ArchiveExtractDart>(
+              'memoryos_archive_extract');
+      _backupPerform = _lib!
+          .lookupFunction<BackupPerformFunc, BackupPerformDart>(
+              'memoryos_backup_perform');
+      _backupRestore = _lib!
+          .lookupFunction<BackupRestoreFunc, BackupRestoreDart>(
+              'memoryos_backup_restore');
     } catch (e) {
       debugPrint(
           'Failed to load native MemoryOS engine: $e. Falling back to local simulated db.');
@@ -218,5 +286,92 @@ class RustFfi {
     final str = ptr.toDartString();
     _freeString!(ptr);
     return str;
+  }
+
+  static int convertDocument(String input, String output) {
+    if (!isAvailable) return -1;
+    final inPtr = input.toNativeUtf8();
+    final outPtr = output.toNativeUtf8();
+    final res = _convertDocument!(inPtr, outPtr);
+    malloc.free(inPtr);
+    malloc.free(outPtr);
+    return res;
+  }
+
+  static int processImage(
+      String input, String output, int width, int height, int quality) {
+    if (!isAvailable) return -1;
+    final inPtr = input.toNativeUtf8();
+    final outPtr = output.toNativeUtf8();
+    final res = _processImage!(inPtr, outPtr, width, height, quality);
+    malloc.free(inPtr);
+    malloc.free(outPtr);
+    return res;
+  }
+
+  static int normalizeWav(String input, String output) {
+    if (!isAvailable) return -1;
+    final inPtr = input.toNativeUtf8();
+    final outPtr = output.toNativeUtf8();
+    final res = _normalizeWav!(inPtr, outPtr);
+    malloc.free(inPtr);
+    malloc.free(outPtr);
+    return res;
+  }
+
+  static String archiveList(String archivePath) {
+    if (!isAvailable) return '[]';
+    final pathPtr = archivePath.toNativeUtf8();
+    final ptr = _archiveList!(pathPtr);
+    malloc.free(pathPtr);
+    final str = ptr.toDartString();
+    _freeString!(ptr);
+    return str;
+  }
+
+  static int archiveCreate(String outputPath, List<String> paths) {
+    if (!isAvailable) return -1;
+    final outPtr = outputPath.toNativeUtf8();
+    final pathsPtr = paths.join('\n').toNativeUtf8();
+    final res = _archiveCreate!(outPtr, pathsPtr);
+    malloc.free(outPtr);
+    malloc.free(pathsPtr);
+    return res;
+  }
+
+  static int archiveExtract(String archivePath, String outputDir) {
+    if (!isAvailable) return -1;
+    final archivePtr = archivePath.toNativeUtf8();
+    final outPtr = outputDir.toNativeUtf8();
+    final res = _archiveExtract!(archivePtr, outPtr);
+    malloc.free(archivePtr);
+    malloc.free(outPtr);
+    return res;
+  }
+
+  static int backupPerform(
+      String dataDir, String backupPath, String keyPhrase) {
+    if (!isAvailable) return -1;
+    final dirPtr = dataDir.toNativeUtf8();
+    final pathPtr = backupPath.toNativeUtf8();
+    final keyPtr = keyPhrase.toNativeUtf8();
+    final res = _backupPerform!(dirPtr, pathPtr, keyPtr);
+    malloc.free(dirPtr);
+    malloc.free(pathPtr);
+    malloc.free(keyPtr);
+    return res;
+  }
+
+  static int backupRestore(
+      String backupPath, String dataDir, String keyPhrase) {
+    if (!isAvailable) return -1;
+    final pathPtr = backupPath.toNativeUtf8();
+    final dirPtr = dataDir.toNativeUtf8();
+    final keyPtr = keyPhrase.toNativeUtf8();
+    final res = _backupRestore!(pathPtr, dirPtr, keyPtr);
+    malloc.free(pathPtr);
+    malloc.free(dirPtr);
+    malloc.free(keyPtr);
+    return res;
   }
 }

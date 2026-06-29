@@ -365,3 +365,85 @@ class FfiStorageRepository implements StorageRepository {
     }
   }
 }
+
+class FfiToolboxRepository implements ToolboxRepository {
+  final ToolboxRepository _fallback = const StubToolboxRepository();
+
+  const FfiToolboxRepository();
+
+  @override
+  Future<bool> convertDocument(String inputPath, String outputPath) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.convertDocument(inputPath, outputPath);
+    }
+    return RustFfi.convertDocument(inputPath, outputPath) == 0;
+  }
+
+  @override
+  Future<bool> processImage(String inputPath, String outputPath, int width,
+      int height, int quality) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.processImage(
+          inputPath, outputPath, width, height, quality);
+    }
+    return RustFfi.processImage(
+            inputPath, outputPath, width, height, quality) ==
+        0;
+  }
+
+  @override
+  Future<bool> normalizeWav(String inputPath, String outputPath) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.normalizeWav(inputPath, outputPath);
+    }
+    return RustFfi.normalizeWav(inputPath, outputPath) == 0;
+  }
+
+  @override
+  Future<List<ArchiveItem>> listArchive(String archivePath) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.listArchive(archivePath);
+    }
+    try {
+      final jsonStr = RustFfi.archiveList(archivePath);
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => ArchiveItem.fromJson(item)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  @override
+  Future<bool> createArchive(String outputPath, List<String> paths) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.createArchive(outputPath, paths);
+    }
+    return RustFfi.archiveCreate(outputPath, paths) == 0;
+  }
+
+  @override
+  Future<bool> extractArchive(String archivePath, String outputDir) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.extractArchive(archivePath, outputDir);
+    }
+    return RustFfi.archiveExtract(archivePath, outputDir) == 0;
+  }
+
+  @override
+  Future<bool> performBackup(
+      String dataDir, String backupPath, String keyPhrase) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.performBackup(dataDir, backupPath, keyPhrase);
+    }
+    return RustFfi.backupPerform(dataDir, backupPath, keyPhrase) == 0;
+  }
+
+  @override
+  Future<bool> restoreBackup(
+      String backupPath, String dataDir, String keyPhrase) async {
+    if (!RustFfi.isAvailable) {
+      return _fallback.restoreBackup(backupPath, dataDir, keyPhrase);
+    }
+    return RustFfi.backupRestore(backupPath, dataDir, keyPhrase) == 0;
+  }
+}

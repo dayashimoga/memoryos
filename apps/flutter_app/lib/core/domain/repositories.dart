@@ -403,3 +403,69 @@ class StubThumbnailRepository implements ThumbnailRepository {
   @override
   Future<void> clearCache() async {}
 }
+
+// ─── Toolbox Repository ───────────────────────────────────────────────────────
+
+abstract class ToolboxRepository {
+  Future<bool> convertDocument(String inputPath, String outputPath);
+  Future<bool> processImage(
+      String inputPath, String outputPath, int width, int height, int quality);
+  Future<bool> normalizeWav(String inputPath, String outputPath);
+  Future<List<ArchiveItem>> listArchive(String archivePath);
+  Future<bool> createArchive(String outputPath, List<String> paths);
+  Future<bool> extractArchive(String archivePath, String outputDir);
+  Future<bool> performBackup(
+      String dataDir, String backupPath, String keyPhrase);
+  Future<bool> restoreBackup(
+      String backupPath, String dataDir, String keyPhrase);
+}
+
+class ArchiveItem {
+  final String name;
+  final int size;
+  final bool isDir;
+
+  const ArchiveItem({
+    required this.name,
+    required this.size,
+    required this.isDir,
+  });
+
+  factory ArchiveItem.fromJson(Map<String, dynamic> json) {
+    return ArchiveItem(
+      name: json['name'] ?? '',
+      size: json['size'] ?? 0,
+      isDir: json['is_dir'] ?? false,
+    );
+  }
+}
+
+class StubToolboxRepository implements ToolboxRepository {
+  const StubToolboxRepository();
+
+  @override
+  Future<bool> convertDocument(String inputPath, String outputPath) async =>
+      true;
+  @override
+  Future<bool> processImage(String inputPath, String outputPath, int width,
+          int height, int quality) async =>
+      true;
+  @override
+  Future<bool> normalizeWav(String inputPath, String outputPath) async => true;
+  @override
+  Future<List<ArchiveItem>> listArchive(String archivePath) async => [];
+  @override
+  Future<bool> createArchive(String outputPath, List<String> paths) async =>
+      true;
+  @override
+  Future<bool> extractArchive(String archivePath, String outputDir) async =>
+      true;
+  @override
+  Future<bool> performBackup(
+          String dataDir, String backupPath, String keyPhrase) async =>
+      true;
+  @override
+  Future<bool> restoreBackup(
+          String backupPath, String dataDir, String keyPhrase) async =>
+      true;
+}
