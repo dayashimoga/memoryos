@@ -91,10 +91,8 @@ typedef TagListDart = Pointer<Utf8> Function();
 typedef TagCreateFunc = Int32 Function(Pointer<Utf8> name, Pointer<Utf8> color);
 typedef TagCreateDart = int Function(Pointer<Utf8> name, Pointer<Utf8> color);
 
-typedef TagFileFunc = Int32 Function(
-    Pointer<Utf8> fileId, Pointer<Utf8> tagId);
-typedef TagFileDart = int Function(
-    Pointer<Utf8> fileId, Pointer<Utf8> tagId);
+typedef TagFileFunc = Int32 Function(Pointer<Utf8> fileId, Pointer<Utf8> tagId);
+typedef TagFileDart = int Function(Pointer<Utf8> fileId, Pointer<Utf8> tagId);
 
 // Collection FFI
 typedef CollectionListFunc = Pointer<Utf8> Function();
@@ -219,24 +217,28 @@ class RustFfi {
               'memoryos_backup_restore');
 
       // Tags
-      _tagList = _lib!
-          .lookupFunction<TagListFunc, TagListDart>('memoryos_tag_list');
+      _tagList =
+          _lib!.lookupFunction<TagListFunc, TagListDart>('memoryos_tag_list');
       _tagCreate = _lib!
           .lookupFunction<TagCreateFunc, TagCreateDart>('memoryos_tag_create');
-      _tagFile = _lib!
-          .lookupFunction<TagFileFunc, TagFileDart>('memoryos_tag_file');
+      _tagFile =
+          _lib!.lookupFunction<TagFileFunc, TagFileDart>('memoryos_tag_file');
 
       // Collections
-      _collectionList = _lib!.lookupFunction<CollectionListFunc,
-          CollectionListDart>('memoryos_collection_list');
-      _collectionCreate = _lib!.lookupFunction<CollectionCreateFunc,
-          CollectionCreateDart>('memoryos_collection_create');
-      _collectionAddFile = _lib!.lookupFunction<CollectionAddFileFunc,
-          CollectionAddFileDart>('memoryos_collection_add_file');
+      _collectionList = _lib!
+          .lookupFunction<CollectionListFunc, CollectionListDart>(
+              'memoryos_collection_list');
+      _collectionCreate = _lib!
+          .lookupFunction<CollectionCreateFunc, CollectionCreateDart>(
+              'memoryos_collection_create');
+      _collectionAddFile = _lib!
+          .lookupFunction<CollectionAddFileFunc, CollectionAddFileDart>(
+              'memoryos_collection_add_file');
 
       // Large files & hash
-      _getLargeFiles = _lib!.lookupFunction<GetLargeFilesFunc,
-          GetLargeFilesDart>('memoryos_get_large_files');
+      _getLargeFiles = _lib!
+          .lookupFunction<GetLargeFilesFunc, GetLargeFilesDart>(
+              'memoryos_get_large_files');
       _hashFile = _lib!
           .lookupFunction<HashFileFunc, HashFileDart>('memoryos_hash_file');
     } catch (e) {

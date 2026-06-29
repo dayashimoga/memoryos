@@ -90,7 +90,7 @@ impl ModelManager {
             let chunk = chunk.map_err(|e| AiError::Download(e.to_string()))?;
             file.write_all(&chunk).await?;
             downloaded += chunk.len() as u64;
-            if downloaded % (50 * 1024 * 1024) == 0 {
+            if downloaded.is_multiple_of(50 * 1024 * 1024) {
                 debug!(
                     model_id,
                     downloaded_mb = downloaded / 1_000_000,

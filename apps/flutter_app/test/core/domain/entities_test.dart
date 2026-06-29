@@ -4,38 +4,66 @@ import 'package:memoryos/core/domain/entities.dart';
 void main() {
   group('FileType.fromExtension', () {
     test('classifies image formats correctly', () {
-      for (final ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'svg']) {
-        expect(FileType.fromExtension(ext), FileType.image, reason: 'Expected $ext to be image');
+      for (final ext in [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'webp',
+        'bmp',
+        'heic',
+        'svg'
+      ]) {
+        expect(FileType.fromExtension(ext), FileType.image,
+            reason: 'Expected $ext to be image');
       }
     });
 
     test('classifies video formats correctly', () {
       for (final ext in ['mp4', 'mov', 'avi', 'mkv', 'webm']) {
-        expect(FileType.fromExtension(ext), FileType.video, reason: 'Expected $ext to be video');
+        expect(FileType.fromExtension(ext), FileType.video,
+            reason: 'Expected $ext to be video');
       }
     });
 
     test('classifies audio formats correctly', () {
       for (final ext in ['mp3', 'flac', 'wav', 'ogg', 'aac', 'm4a']) {
-        expect(FileType.fromExtension(ext), FileType.audio, reason: 'Expected $ext to be audio');
+        expect(FileType.fromExtension(ext), FileType.audio,
+            reason: 'Expected $ext to be audio');
       }
     });
 
     test('classifies document formats correctly', () {
       for (final ext in ['doc', 'docx', 'odt', 'rtf']) {
-        expect(FileType.fromExtension(ext), FileType.document, reason: 'Expected $ext to be document');
+        expect(FileType.fromExtension(ext), FileType.document,
+            reason: 'Expected $ext to be document');
       }
     });
 
     test('classifies code formats correctly', () {
-      for (final ext in ['py', 'js', 'ts', 'dart', 'rs', 'go', 'java', 'json', 'yaml', 'html', 'css', 'sql']) {
-        expect(FileType.fromExtension(ext), FileType.code, reason: 'Expected $ext to be code');
+      for (final ext in [
+        'py',
+        'js',
+        'ts',
+        'dart',
+        'rs',
+        'go',
+        'java',
+        'json',
+        'yaml',
+        'html',
+        'css',
+        'sql'
+      ]) {
+        expect(FileType.fromExtension(ext), FileType.code,
+            reason: 'Expected $ext to be code');
       }
     });
 
     test('classifies archive formats correctly', () {
       for (final ext in ['zip', 'tar', 'gz', 'rar', '7z']) {
-        expect(FileType.fromExtension(ext), FileType.archive, reason: 'Expected $ext to be archive');
+        expect(FileType.fromExtension(ext), FileType.archive,
+            reason: 'Expected $ext to be archive');
       }
     });
 
@@ -89,7 +117,7 @@ void main() {
       sizeBytes: 1536000,
       createdAt: now,
       modifiedAt: now,
-      tags: ['nature', 'landscape'],
+      tags: const ['nature', 'landscape'],
       summary: 'A beautiful landscape photo',
     );
 
@@ -161,8 +189,8 @@ void main() {
     });
 
     test('recoverableBytes calculation', () {
-      const stats = StorageStats(
-          duplicateSizeBytes: 1000000, blurryImageCount: 10);
+      const stats =
+          StorageStats(duplicateSizeBytes: 1000000, blurryImageCount: 10);
       expect(stats.recoverableBytes, 1000000 + 10 * 512 * 1024);
     });
   });

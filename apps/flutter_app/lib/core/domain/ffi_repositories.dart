@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/ffi/rust_ffi.dart';
@@ -335,10 +334,10 @@ class FfiCollectionRepository implements CollectionRepository {
                 name: item['name'] ?? '',
                 description: item['description'],
                 fileCount: item['file_count'] ?? 0,
-                createdAt:
-                    DateTime.tryParse(item['created_at'] ?? '') ?? DateTime.now(),
-                updatedAt:
-                    DateTime.tryParse(item['updated_at'] ?? '') ?? DateTime.now(),
+                createdAt: DateTime.tryParse(item['created_at'] ?? '') ??
+                    DateTime.now(),
+                updatedAt: DateTime.tryParse(item['updated_at'] ?? '') ??
+                    DateTime.now(),
               ))
           .toList();
     } catch (_) {

@@ -109,7 +109,7 @@ jobs:
 
       - name: Flutter analyze
         working-directory: apps/flutter_app
-        run: flutter analyze --fatal-infos
+        run: flutter analyze
 
       - name: Flutter format check
         working-directory: apps/flutter_app

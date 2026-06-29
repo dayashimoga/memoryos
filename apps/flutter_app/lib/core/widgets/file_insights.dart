@@ -130,8 +130,7 @@ class FileInsightsCard extends StatelessWidget {
                     color: DesignTokens.brand.withOpacity(0.3),
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(DesignTokens.radiusMd),
+                    borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                   ),
                 ),
               ),
@@ -209,12 +208,11 @@ class FileInsightsCard extends StatelessWidget {
                 onTap: onViewRelated,
                 borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
                     color: DesignTokens.brand.withOpacity(isDark ? 0.08 : 0.05),
-                    borderRadius:
-                        BorderRadius.circular(DesignTokens.radiusMd),
+                    borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                   ),
                   child: Row(
                     children: [

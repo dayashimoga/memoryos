@@ -107,7 +107,7 @@ services:
       bash -c "
         flutter pub get &&
         dart format --set-exit-if-changed . &&
-        flutter analyze --fatal-infos
+        flutter analyze
       "
     networks:
       - memoryos

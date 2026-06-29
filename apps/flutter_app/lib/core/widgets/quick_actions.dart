@@ -214,14 +214,11 @@ class _QuickActionChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark
-                ? DesignTokens.darkCard
-                : Colors.white,
+            color: isDark ? DesignTokens.darkCard : Colors.white,
             borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
             border: Border.all(
-              color: isDark
-                  ? DesignTokens.darkBorder
-                  : DesignTokens.lightBorder,
+              color:
+                  isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
             ),
             boxShadow: [
               BoxShadow(

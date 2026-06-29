@@ -92,7 +92,7 @@ dependencies:
   dio: ^5.4.0
   
   # Storage info
-  disk_space_plus: ^0.2.6
+  disk_space_plus: 0.2.4
 
 dev_dependencies:
   flutter_test:

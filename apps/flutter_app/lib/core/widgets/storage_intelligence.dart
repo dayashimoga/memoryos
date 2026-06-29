@@ -74,7 +74,8 @@ class StorageIntelligenceCard extends StatelessWidget {
                           fontFamily: 'Inter',
                           fontWeight: FontWeight.w700,
                           fontSize: 15,
-                          color: isDark ? Colors.white : const Color(0xFF1E293B),
+                          color:
+                              isDark ? Colors.white : const Color(0xFF1E293B),
                         ),
                       ),
                       Text(
@@ -90,8 +91,7 @@ class StorageIntelligenceCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                if (hasRecoverable)
-                  _PulsingDot(color: const Color(0xFF10B981)),
+                if (hasRecoverable) _PulsingDot(color: const Color(0xFF10B981)),
               ],
             ),
 
@@ -126,7 +126,8 @@ class StorageIntelligenceCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(isDark ? 0.12 : 0.08),
+                  color:
+                      const Color(0xFF10B981).withOpacity(isDark ? 0.12 : 0.08),
                   borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
                   border: Border.all(
                     color: const Color(0xFF10B981).withOpacity(0.2),
