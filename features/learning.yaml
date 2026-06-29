@@ -1,0 +1,38 @@
+# MemoryOS Feature Specification
+id: learning
+name: "Interactive Learning"
+description: "Flashcards and spaced repetition learning module utilizing SuperMemo SM-2 algorithms."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Flippable card controls"
+  - "Spaced repetition schedule engine"
+  - "Quality metrics feedback"
+acceptance_criteria:
+  - "SM-2 schedules correctly"
+  - "Calculates next interval"
+  - "Remembers ease parameters"
+dependencies:
+  - ai
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - learning_page.dart
+apis:
+  - memoryos_list_files
+database_objects:
+  - flashcards
+  - learning_records
+tests:
+  - core_test.dart
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "SM-2 scheduling calculations < 10ms"
+accessibility_requirements: "Screen reader support for flashcard fronts and backs"
+security_requirements: "User progress records are completely local and encrypted"

@@ -1,0 +1,40 @@
+# MemoryOS Feature Specification
+id: converter
+name: "Universal Digital Toolbox"
+description: "Offline format converter supporting EPUB, DOCX, Markdown, HTML, PDF, WAV normalizations, and ZIP creation."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Markdown ⇄ HTML formatting"
+  - "Native DOCX builder"
+  - "WAV amplitude normalization"
+  - "ZIP compressors"
+acceptance_criteria:
+  - "Converts markdown to PDF outline correctly"
+  - "Normalizes PCM WAV peak amplitudes"
+  - "Unpacks encrypted ZIP packages"
+dependencies:
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - toolbox_page.dart
+  - rust_ffi.dart
+apis:
+  - memoryos_convert_document
+  - memoryos_process_image
+  - memoryos_normalize_wav
+  - memoryos_archive_create
+database_objects:
+tests:
+  - core_test.dart
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "Conversion throughput > 10 pages/second"
+accessibility_requirements: "Accessible sliders, quality selectors, progress logs"
+security_requirements: "100% offline local conversion scans, keyphrase AES backups"

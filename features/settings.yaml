@@ -1,0 +1,36 @@
+# MemoryOS Feature Specification
+id: settings
+name: "System Preferences"
+description: "System preferences console managing active models, database paths, language options, and user preferences."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Theme selectors widgets"
+  - "Selected AI model controllers"
+  - "Watched directories listings"
+acceptance_criteria:
+  - "Switches themes and colors immediately"
+  - "Shows model download sizes correctly"
+  - "Persists user values"
+dependencies:
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - settings_page.dart
+  - settings_bloc.dart
+apis:
+database_objects:
+  - settings
+tests:
+  - core_test.dart
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "Configuration changes update < 50ms"
+accessibility_requirements: "Full screen contrast modes support, touch feedback target checks"
+security_requirements: "User preferences configuration sandbox parameters"

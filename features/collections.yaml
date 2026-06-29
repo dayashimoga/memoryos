@@ -1,0 +1,38 @@
+# MemoryOS Feature Specification
+id: collections
+name: "Smart Collections"
+description: "Visual grouping framework managing user-defined tags, collections, and AI suggested tags."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Folder/collection hierarchies builder"
+  - "Suggested tags matching widgets"
+  - "Drag & drop tags"
+acceptance_criteria:
+  - "Collections list displays count metrics"
+  - "Updates tags instantaneously"
+  - "Re-ranks matching items"
+dependencies:
+  - search
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - collections_page.dart
+apis:
+  - memoryos_list_files
+database_objects:
+  - collections
+  - file_tags
+tests:
+  - core_test.dart
+docs:
+  - docs/user-guide/organization.md
+performance_targets: "Collections load under 150ms"
+accessibility_requirements: "Accessible list tags screen reader announcements"
+security_requirements: "Omit vault items from smart category recommendations"

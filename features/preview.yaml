@@ -1,0 +1,37 @@
+# MemoryOS Feature Specification
+id: preview
+name: "Rich Preview Engine"
+description: "Preview generation engine supporting images, markdown, code, and generic previews."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Progressive thumbnail preview overlays"
+  - "Type matching file icons display"
+  - "Vault secure preview frames"
+acceptance_criteria:
+  - "Previews load under 100ms"
+  - "Shows correct file metadata parameters"
+  - "Renders markdown layout cleanly"
+dependencies:
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - file_detail_page.dart
+  - shared_widgets.dart
+apis:
+  - memoryos_get_file
+database_objects:
+  - files
+tests:
+  - core_test.dart
+docs:
+  - docs/architecture/overview.md
+performance_targets: "Preview load latency < 100ms"
+accessibility_requirements: "Alt-text descriptions generated, accessible focus"
+security_requirements: "Sandboxed preview render boundary constraints"

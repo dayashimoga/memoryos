@@ -1,0 +1,38 @@
+# MemoryOS Feature Specification
+id: duplicates
+name: "Duplicate Clustering"
+description: "Near-duplicate image groupings using pHash algorithms and SHA-256 binary validation."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Perceptual pHash calculations"
+  - "SHA-256 verification checks"
+  - "Similarity rating cluster"
+acceptance_criteria:
+  - "Identifies matching images with different formats"
+  - "Calculates space recovery correctly"
+  - "Validates blurry image frames"
+dependencies:
+  - storage
+rust_modules:
+  - duplicate-engine
+flutter_modules:
+  - duplicates_page.dart
+apis:
+  - memoryos_get_duplicates
+database_objects:
+  - files
+tests:
+  - core_test.dart
+  - duplicate_engine_tests
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "Clustering takes < 1s"
+accessibility_requirements: "Accessible visual comparison cards, clear delete actions"
+security_requirements: "Vault files isolated from duplicate clustering scans"

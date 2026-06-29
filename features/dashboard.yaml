@@ -1,0 +1,40 @@
+# MemoryOS Feature Specification
+id: dashboard
+name: "Home Dashboard"
+description: "Personalized workspace containing AI summaries, storage health index metrics, active project lists, and recent activity."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Progressive media thumbnail loading"
+  - "Staggered masonry grids display"
+  - "Active memory indexing state widgets"
+acceptance_criteria:
+  - "Dashboard loads within 2 seconds"
+  - "Shows correct storage usage ratio"
+  - "Displays recent index feeds"
+dependencies:
+  - storage
+  - preview
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - home_page.dart
+  - shared_widgets.dart
+apis:
+  - memoryos_storage_stats
+  - memoryos_list_files
+database_objects:
+  - files
+tests:
+  - core_test.dart
+docs:
+  - docs/architecture/overview.md
+performance_targets: "Startup loading < 3 seconds"
+accessibility_requirements: "Touch targets >= 48x48 dp"
+security_requirements: "Sandbox local file isolation"

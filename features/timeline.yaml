@@ -1,0 +1,37 @@
+# MemoryOS Feature Specification
+id: timeline
+name: "Chronological Timeline"
+description: "Visual index browser grouping screenshots, messages, and files chronologically."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Day/Week/Month grouping layout"
+  - "Filter indices updates"
+  - "Interactive slider navigations"
+acceptance_criteria:
+  - "Smooth scrolling on timeline stream"
+  - "Correct date header allocations"
+  - "Renders file cards with type markers"
+dependencies:
+  - preview
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - timeline_page.dart
+apis:
+  - memoryos_list_files
+database_objects:
+  - files
+tests:
+  - core_test.dart
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "Renders timeline list under 100ms"
+accessibility_requirements: "Semantic dates readout, keyboard scrolls"
+security_requirements: "Vault entries omitted from public timeline views"

@@ -1,0 +1,41 @@
+# MemoryOS Feature Specification
+id: ai
+name: "AI Intelligence Engine"
+description: "Local AI execution backing chat, flashcards, summarization, entity indexing, and automated tags generation."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Conversational context chat"
+  - "Smart title generator"
+  - "Text summarization"
+acceptance_criteria:
+  - "Summaries generated under 10 seconds"
+  - "Suggested tags match topic scope"
+  - "Offline model downloading works"
+dependencies:
+  - storage
+rust_modules:
+  - ai-engine
+flutter_modules:
+  - chat_page.dart
+  - models_page.dart
+apis:
+  - memoryos_chat
+  - memoryos_summarize
+database_objects:
+  - chat_sessions
+  - chat_messages
+tests:
+  - core_test.dart
+  - ai_engine_tests
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "AI response latency < 10s"
+accessibility_requirements: "Semantic headings in markdown reports"
+security_requirements: "Keyphrase sandbox isolation, local inferences"

@@ -1,0 +1,36 @@
+# MemoryOS Feature Specification
+id: automation
+name: "File Monitoring Automation"
+description: "Directory watching daemon tracking creation, renames, and deletions in watched paths."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Auto-indexing worker schedules"
+  - "FS event notifications parser"
+  - "Watched folders dashboard"
+acceptance_criteria:
+  - "Indices file creation events correctly"
+  - "Deletes entries on file loss"
+  - "Excludes non-media structures"
+dependencies:
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - settings_page.dart
+apis:
+  - memoryos_index_file
+database_objects:
+  - watched_directories
+tests:
+  - core_test.dart
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "Auto-indices folder updates in < 1s"
+accessibility_requirements: "Watched paths list screen reader accessible"
+security_requirements: "Directory scans restricted to selected watched paths only"

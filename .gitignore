@@ -61,3 +61,5 @@ tarpaulin-report.html
 # ─── MemoryOS Data ──────────────────────────────────────────────────────────
 .memoryos_data/
 memoryos_data/
+/artifacts/
+/data/

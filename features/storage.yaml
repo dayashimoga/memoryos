@@ -1,0 +1,37 @@
+# MemoryOS Feature Specification
+id: storage
+name: "Storage Optimizer"
+description: "Analytics engine compiling space utilization, cache sizes, heatmaps, and cleanup helpers."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Heatmap visualizer"
+  - "Space recovery calculations"
+  - "Usage ratio logs"
+acceptance_criteria:
+  - "Analytics updates within 500ms"
+  - "Exposes duplicate sizes"
+  - "Renders visual graphs"
+dependencies:
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - duplicates_page.dart
+  - home_page.dart
+apis:
+  - memoryos_storage_stats
+database_objects:
+  - files
+tests:
+  - core_test.dart
+docs:
+  - docs/architecture/overview.md
+performance_targets: "Calculations take < 500ms"
+accessibility_requirements: "High contrast charts, label readouts"
+security_requirements: "Read-only storage scanning boundary constraints"

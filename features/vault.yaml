@@ -1,0 +1,39 @@
+# MemoryOS Feature Specification
+id: vault
+name: "Secure Vault"
+description: "Password encrypted vault using AES-256-GCM and Argon2id key derivation."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "AES-256-GCM local encryption"
+  - "Overwrite-before-delete secure deletion"
+  - "Biometrics verification"
+acceptance_criteria:
+  - "Vault files inaccessible without password"
+  - "Decrypts on-the-fly successfully"
+  - "Secure delete wipes blocks"
+dependencies:
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - vault_page.dart
+apis:
+  - memoryos_vault_add
+  - memoryos_vault_remove
+  - memoryos_vault_list
+database_objects:
+  - files
+  - vault_metadata
+tests:
+  - core_test.dart
+docs:
+  - docs/security/audit.md
+performance_targets: "Encryption/decryption overhead < 100ms"
+accessibility_requirements: "Accessible password fields and dialog notifications"
+security_requirements: "Argon2id key derivation, zero plain text leaks"

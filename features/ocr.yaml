@@ -1,0 +1,38 @@
+# MemoryOS Feature Specification
+id: ocr
+name: "OCR Extraction Pipeline"
+description: "Offline optical character recognition backing document parsing, tesseract extracts, and confidence-score routing."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Tesseract extraction"
+  - "PaddleOCR validation"
+  - "Bounding box layout checks"
+acceptance_criteria:
+  - "OCR processes images under 5 seconds"
+  - "Returns high confidence text"
+  - "Auto-rotates image targets"
+dependencies:
+  - storage
+rust_modules:
+  - ocr-engine
+flutter_modules:
+  - file_detail_page.dart
+apis:
+  - memoryos_index_file
+database_objects:
+  - files
+tests:
+  - core_test.dart
+  - ocr_engine_tests
+docs:
+  - docs/requirements/functional-requirements.md
+performance_targets: "OCR latency < 5s per image"
+accessibility_requirements: "Extracted text exposed to screen reader users"
+security_requirements: "Vault files undergo sandboxed local OCR only"

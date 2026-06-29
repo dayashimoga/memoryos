@@ -1,0 +1,38 @@
+# MemoryOS Feature Specification
+id: knowledge_graph
+name: "Interactive Memory Galaxy"
+description: "Verlet physics canvas galaxy graph visualizing nodes, categories, and file relationships."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Dynamic Verlet node attractions/repulsions"
+  - "Zoom/pan coordinate maps"
+  - "Topic details panels"
+acceptance_criteria:
+  - "Ticks at smooth 60fps frame rates"
+  - "Attracts connected topics"
+  - "Repulses overlapping nodes"
+dependencies:
+  - search
+rust_modules:
+  - memoryos-core-engine
+flutter_modules:
+  - galaxy_page.dart
+apis:
+  - memoryos_search
+database_objects:
+  - files
+  - file_relationships
+tests:
+  - core_test.dart
+docs:
+  - docs/architecture/overview.md
+performance_targets: "Renders graph layout at smooth 60fps frame rates"
+accessibility_requirements: "Text explorer fallback mode list, zoom shortcuts support"
+security_requirements: "Omit vault records from galaxy node maps"

@@ -1,0 +1,43 @@
+# MemoryOS Feature Specification
+id: search
+name: "Universal Memory Search"
+description: "Hybrid search engine combining full-text indexing, vector embeddings, visual color filters, and natural language query processing."
+status: implemented
+supported_platforms:
+  - Android
+  - iOS
+  - Windows
+  - macOS
+  - Linux
+  - Web
+expected_capabilities:
+  - "Full-text FTS5 matching"
+  - "Color similarity search extraction"
+  - "NLP query mapping"
+acceptance_criteria:
+  - "Search returns matches within 200ms"
+  - "Color bubble matches visual items"
+  - "Search history is persisted"
+dependencies:
+  - ocr
+  - ai
+rust_modules:
+  - search-engine
+  - memoryos-core-engine
+flutter_modules:
+  - search_page.dart
+  - shared_widgets.dart
+apis:
+  - memoryos_search
+  - memoryos_get_file
+database_objects:
+  - files_fts
+  - search_history
+tests:
+  - core_test.dart
+  - search_engine_tests
+docs:
+  - docs/user-guide/search.md
+performance_targets: "Search response latency < 200ms"
+accessibility_requirements: "Accessible search field labeled, screen reader compatible"
+security_requirements: "FTS indexing handles secure vault boundary checks"
