@@ -101,8 +101,8 @@ void main() {
     test('jpg maps to image', () {
       expect(FileType.fromExtension('jpg'), FileType.image);
     });
-    test('pdf maps to document', () {
-      expect(FileType.fromExtension('pdf'), FileType.document);
+    test('pdf maps to pdf', () {
+      expect(FileType.fromExtension('pdf'), FileType.pdf);
     });
     test('mp4 maps to video', () {
       expect(FileType.fromExtension('mp4'), FileType.video);
@@ -132,7 +132,7 @@ void main() {
       expect(FileType.document.isDocument, isTrue);
     });
     test('case insensitive extension matching', () {
-      expect(FileType.fromExtension('PDF'), FileType.document);
+      expect(FileType.fromExtension('PDF'), FileType.pdf);
       expect(FileType.fromExtension('MP3'), FileType.audio);
     });
   });

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memoryos/core/blocs/app_blocs.dart';
+import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
-/// Collections page — smart and manual collections grid.
+/// Collections page — wired to CollectionsBloc.
 class CollectionsPage extends StatefulWidget {
   const CollectionsPage({super.key});
 
@@ -15,95 +17,122 @@ class CollectionsPage extends StatefulWidget {
 
 class _CollectionsPageState extends State<CollectionsPage>
     with SingleTickerProviderStateMixin {
-  late TabController _tab;
-  String _search = '';
+  late final TabController _tabs;
+  String _filter = '';
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 2, vsync: this);
+    _tabs = TabController(length: 2, vsync: this);
+    context.read<CollectionsBloc>().add(CollectionsLoadRequested());
   }
 
   @override
   void dispose() {
-    _tab.dispose();
+    _tabs.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Collections'),
-        bottom: TabBar(
-          controller: _tab,
-          tabs: const [
-            Tab(text: 'Smart'),
-            Tab(text: 'Manual'),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_rounded),
-            onPressed: _showCreateDialog,
-            tooltip: 'New collection',
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search within collections
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Search collections...',
-                prefixIcon: Icon(Icons.search_rounded),
+    return BlocBuilder<CollectionsBloc, CollectionsState>(
+      builder: (context, state) {
+        return Scaffold(
+          body: NestedScrollView(
+            headerSliverBuilder: (context, _) => [
+              SliverAppBar(
+                floating: true,
+                snap: true,
+                title: const Text('Collections'),
+                bottom: TabBar(
+                  controller: _tabs,
+                  tabs: const [
+                    Tab(text: 'Smart'),
+                    Tab(text: 'Manual'),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.add_rounded),
+                    onPressed: () => _showCreateDialog(context),
+                    tooltip: 'Create collection',
+                  ),
+                ],
               ),
-              onChanged: (v) => setState(() => _search = v.toLowerCase()),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: TabBarView(
-              controller: _tab,
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: _SearchBar(
+                    onChanged: (v) => setState(() => _filter = v.toLowerCase()),
+                  ),
+                ),
+              ),
+            ],
+            body: TabBarView(
+              controller: _tabs,
               children: [
-                _SmartCollectionsGrid(search: _search),
-                _ManualCollectionsGrid(search: _search),
+                _CollectionGrid(
+                  collections: state.smart
+                      .where((c) => c.name.toLowerCase().contains(_filter))
+                      .toList(),
+                  status: state.status,
+                  isSmart: true,
+                  onTap: (c) => context.go('/collections/${c.id}'),
+                  onDelete: null, // Smart collections can't be deleted
+                ),
+                _CollectionGrid(
+                  collections: state.manual
+                      .where((c) => c.name.toLowerCase().contains(_filter))
+                      .toList(),
+                  status: state.status,
+                  isSmart: false,
+                  onTap: (c) => context.go('/collections/${c.id}'),
+                  onDelete: (c) => context
+                      .read<CollectionsBloc>()
+                      .add(CollectionDeleted(c.id)),
+                ),
               ],
             ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  void _showCreateDialog() {
-    final controller = TextEditingController();
+  void _showCreateDialog(BuildContext context) {
+    final ctl = TextEditingController();
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('New Collection'),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
-        ),
+            borderRadius: BorderRadius.circular(DesignTokens.radiusXl)),
         content: TextField(
-          controller: controller,
+          controller: ctl,
           autofocus: true,
           decoration: const InputDecoration(
-            labelText: 'Collection name',
-            hintText: 'e.g., Project Alpha',
+            hintText: 'Collection name',
+            prefixIcon: Icon(Icons.folder_rounded),
           ),
+          textCapitalization: TextCapitalization.words,
+          onSubmitted: (v) {
+            if (v.trim().isNotEmpty) {
+              context.read<CollectionsBloc>().add(CollectionCreated(v.trim()));
+              Navigator.pop(ctx);
+            }
+          },
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
           FilledButton(
             onPressed: () {
-              Navigator.pop(ctx);
-              // TODO: create collection via repository
+              final name = ctl.text.trim();
+              if (name.isNotEmpty) {
+                context.read<CollectionsBloc>().add(CollectionCreated(name));
+                Navigator.pop(ctx);
+              }
             },
             child: const Text('Create'),
           ),
@@ -113,161 +142,291 @@ class _CollectionsPageState extends State<CollectionsPage>
   }
 }
 
-// ─── Smart Collections ────────────────────────────────────────────────────────
-
-class _SmartCollectionsGrid extends StatelessWidget {
-  final String search;
-
-  static const _collections = [
-    _CollData('Cloud & DevOps', Icons.cloud_rounded, Color(0xFF6366F1),
-        'Kubernetes, AWS, Docker, Terraform files', 89),
-    _CollData('Security', Icons.security_rounded, Color(0xFFEF4444),
-        'Security reports, CVE notes, policies', 42),
-    _CollData('Finance', Icons.account_balance_rounded, Color(0xFF10B981),
-        'Invoices, receipts, bank statements', 40),
-    _CollData('Learning', Icons.school_rounded, Color(0xFFEC4899),
-        'Notes, tutorials, courses, flashcards', 128),
-    _CollData('Meetings', Icons.meeting_room_rounded, Color(0xFF3B82F6),
-        'Recordings, notes, action items', 64),
-    _CollData('Chess', Icons.sports_esports_rounded, Color(0xFF64748B),
-        'Opening theory, game analysis, puzzles', 32),
-    _CollData('Screenshots', Icons.screenshot_monitor_rounded, Color(0xFF8B5CF6),
-        'UI screenshots, error messages, diagrams', 210),
-    _CollData('Travel', Icons.flight_rounded, Color(0xFF14B8A6),
-        'Itineraries, bookings, photos', 18),
-    _CollData('Medical', Icons.local_hospital_rounded, Color(0xFFEF4444),
-        'Reports, prescriptions, lab results', 12),
-    _CollData('Work', Icons.work_rounded, Color(0xFF3B82F6),
-        'Projects, reports, presentations', 76),
-    _CollData('Personal', Icons.person_rounded, Color(0xFF8B5CF6),
-        'Personal documents, photos, notes', 54),
-    _CollData('Code', Icons.code_rounded, Color(0xFF06B6D4),
-        'Source code, configs, scripts', 93),
-  ];
-
-  const _SmartCollectionsGrid({required this.search});
+class _SearchBar extends StatelessWidget {
+  final ValueChanged<String> onChanged;
+  const _SearchBar({required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final filtered = search.isEmpty
-        ? _collections
-        : _collections
-            .where((c) => c.name.toLowerCase().contains(search))
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      height: 40,
+      decoration: BoxDecoration(
+        color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
+        borderRadius: BorderRadius.circular(DesignTokens.radiusLg),
+        border: Border.all(
+            color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+      ),
+      child: TextField(
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          hintText: 'Search collections...',
+          prefixIcon: const Icon(Icons.search_rounded, size: 18),
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          hintStyle: TextStyle(
+            color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
+            fontSize: 13,
+          ),
+        ),
+        style: const TextStyle(fontFamily: 'Inter', fontSize: 13),
+      ),
+    );
+  }
+}
+
+class _CollectionGrid extends StatelessWidget {
+  final List<Collection> collections;
+  final CollectionsStatus status;
+  final bool isSmart;
+  final void Function(Collection)? onTap;
+  final void Function(Collection)? onDelete;
+
+  const _CollectionGrid({
+    required this.collections,
+    required this.status,
+    required this.isSmart,
+    this.onTap,
+    this.onDelete,
+  });
+
+  static const _smartCollections = [
+    _SmartMeta('Cloud & DevOps', Icons.cloud_rounded, Color(0xFF0EA5E9), 'Infrastructure, Docker, Kubernetes, AWS'),
+    _SmartMeta('Security', Icons.security_rounded, Color(0xFFEF4444), 'CVEs, certificates, passwords, audits'),
+    _SmartMeta('Finance', Icons.attach_money_rounded, Color(0xFF10B981), 'Invoices, receipts, tax, banking'),
+    _SmartMeta('Learning', Icons.school_rounded, Color(0xFF6366F1), 'Tutorials, notes, flashcards, books'),
+    _SmartMeta('Meetings', Icons.groups_rounded, Color(0xFFF59E0B), 'Meeting notes, recordings, agendas'),
+    _SmartMeta('Chess', Icons.sports_esports_rounded, Color(0xFF8B5CF6), 'Openings, analysis, games, tactics'),
+    _SmartMeta('Screenshots', Icons.screenshot_monitor_rounded, Color(0xFF64748B), 'Screenshots from any app'),
+    _SmartMeta('Travel', Icons.flight_rounded, Color(0xFF0891B2), 'Itineraries, tickets, visas, photos'),
+    _SmartMeta('Medical', Icons.local_hospital_rounded, Color(0xFFDC2626), 'Reports, prescriptions, health data'),
+    _SmartMeta('Research', Icons.science_rounded, Color(0xFF7C3AED), 'Papers, experiments, citations'),
+    _SmartMeta('Code & Dev', Icons.code_rounded, Color(0xFF16A34A), 'Source code, configs, READMEs'),
+    _SmartMeta('Personal', Icons.person_rounded, Color(0xFFDB2777), 'Personal memories, diary, photos'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    if (status == CollectionsStatus.loading) {
+      return GridView.builder(
+        padding: const EdgeInsets.all(16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.4,
+        ),
+        itemCount: 6,
+        itemBuilder: (_, i) => const SkeletonBox(radius: 16)
+            .animate()
+            .fadeIn(delay: (i * 40).ms),
+      );
+    }
+
+    final items = isSmart && collections.isEmpty
+        ? _smartCollections
+            .map((m) => _CollectionGridItem(
+                  name: m.name,
+                  icon: m.icon,
+                  color: m.color,
+                  subtitle: m.subtitle,
+                  fileCount: 0,
+                  isSmartTemplate: true,
+                  onTap: () {},
+                  onDelete: null,
+                ))
+            .toList()
+        : collections
+            .asMap()
+            .entries
+            .map((e) {
+              final c = e.value;
+              final meta = isSmart && e.key < _smartCollections.length
+                  ? _smartCollections[e.key]
+                  : null;
+              return _CollectionGridItem(
+                name: c.name,
+                icon: meta?.icon ?? Icons.folder_rounded,
+                color: meta?.color ?? DesignTokens.brand,
+                subtitle: '${c.fileCount} files',
+                fileCount: c.fileCount,
+                isSmartTemplate: false,
+                onTap: () => onTap?.call(c),
+                onDelete: onDelete != null ? () => onDelete!(c) : null,
+              );
+            })
             .toList();
 
-    if (filtered.isEmpty) {
+    if (items.isEmpty) {
       return EmptyStateWidget(
-        icon: Icons.search_off_rounded,
-        title: 'No collections found',
-        subtitle: 'Try a different search term.',
+        icon: isSmart ? Icons.auto_awesome_rounded : Icons.folder_open_rounded,
+        title: isSmart ? 'No smart collections' : 'No manual collections',
+        subtitle: isSmart
+            ? 'Import and index files to populate smart collections.'
+            : 'Create your first collection to organize files.',
+        actionLabel: isSmart ? null : 'Create Collection',
+        iconColor: DesignTokens.brand,
       );
     }
 
     return GridView.builder(
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 200,
-        crossAxisSpacing: 12,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: MediaQuery.sizeOf(context).width > 800 ? 3 : 2,
         mainAxisSpacing: 12,
-        childAspectRatio: 1.0,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.35,
       ),
-      itemCount: filtered.length,
-      itemBuilder: (context, i) => _CollectionCard(data: filtered[i])
-          .animate()
-          .fadeIn(delay: (i * 30).ms, duration: 250.ms)
-          .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1)),
+      itemCount: items.length,
+      itemBuilder: (context, i) =>
+          items[i].animate().fadeIn(delay: (i * 35).ms, duration: 200.ms)
+              .slideY(begin: 0.04, end: 0),
     );
   }
 }
 
-class _ManualCollectionsGrid extends StatelessWidget {
-  final String search;
-  const _ManualCollectionsGrid({required this.search});
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyStateWidget(
-      icon: Icons.folder_outlined,
-      title: 'No manual collections',
-      subtitle: 'Create your own collections to organize files your way.',
-      actionLabel: 'Create Collection',
-      onAction: () {},
-    );
-  }
-}
-
-class _CollData {
+class _SmartMeta {
   final String name;
   final IconData icon;
   final Color color;
-  final String description;
-  final int fileCount;
-  const _CollData(this.name, this.icon, this.color, this.description,
-      this.fileCount);
+  final String subtitle;
+  const _SmartMeta(this.name, this.icon, this.color, this.subtitle);
 }
 
-class _CollectionCard extends StatelessWidget {
-  final _CollData data;
-  const _CollectionCard({required this.data});
+class _CollectionGridItem extends StatefulWidget {
+  final String name;
+  final IconData icon;
+  final Color color;
+  final String subtitle;
+  final int fileCount;
+  final bool isSmartTemplate;
+  final VoidCallback onTap;
+  final VoidCallback? onDelete;
+
+  const _CollectionGridItem({
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.subtitle,
+    required this.fileCount,
+    required this.isSmartTemplate,
+    required this.onTap,
+    this.onDelete,
+  });
+
+  @override
+  State<_CollectionGridItem> createState() => _CollectionGridItemState();
+}
+
+class _CollectionGridItemState extends State<_CollectionGridItem>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressCtl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressCtl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+      reverseDuration: const Duration(milliseconds: 200),
+    );
+    _scale = Tween<double>(begin: 1, end: 0.96)
+        .animate(CurvedAnimation(parent: _pressCtl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _pressCtl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return PremiumCard(
-      onTap: () => HapticFeedback.selectionClick(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return GestureDetector(
+      onTapDown: (_) => _pressCtl.forward(),
+      onTapUp: (_) {
+        _pressCtl.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _pressCtl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
+            borderRadius: BorderRadius.circular(DesignTokens.radiusLg),
+            border: Border.all(
+                color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: data.color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
-                ),
-                child: Icon(data.icon, color: data.color, size: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: widget.color.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+                    ),
+                    child: Icon(widget.icon, color: widget.color, size: 20),
+                  ),
+                  const Spacer(),
+                  if (widget.isSmartTemplate)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: DesignTokens.brand.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                      ),
+                      child: const Text('Auto',
+                          style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: DesignTokens.brand)),
+                    )
+                  else if (widget.onDelete != null)
+                    InkWell(
+                      onTap: widget.onDelete,
+                      borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+                      child: const Padding(
+                        padding: EdgeInsets.all(4),
+                        child: Icon(Icons.delete_outline_rounded, size: 14, color: Color(0xFF94A3B8)),
+                      ),
+                    ),
+                ],
               ),
               const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: data.color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
-                ),
-                child: Text(
-                  '${data.fileCount}',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                    color: data.color,
-                  ),
-                ),
+              Text(
+                widget.name,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Text(
+                widget.subtitle,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF94A3B8),
+                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-          const Spacer(),
-          Text(
-            data.name,
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.w700),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(
-            data.description,
-            style: Theme.of(context).textTheme.bodySmall,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+        ),
       ),
     );
   }

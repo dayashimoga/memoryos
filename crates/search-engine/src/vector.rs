@@ -32,7 +32,10 @@ impl VectorSearcher {
         // For now, return empty (vector DB may not be populated yet).
         // This is intentional: the system degrades gracefully to FTS-only when
         // no embeddings exist.
-        warn!(query = query_text, "Vector search called but no embeddings exist yet");
+        warn!(
+            query = query_text,
+            "Vector search called but no embeddings exist yet"
+        );
         Ok(Vec::new())
     }
 
@@ -44,17 +47,17 @@ impl VectorSearcher {
     ) -> Result<i64, SearchError> {
         // Production: INSERT INTO vec_items (file_id, embedding) VALUES (?, ?)
         // using the sqlite-vec binary format.
-        tracing::debug!(file_id, "Embedding insert (stub - requires sqlite-vec extension)");
+        tracing::debug!(
+            file_id,
+            "Embedding insert (stub - requires sqlite-vec extension)"
+        );
         Ok(0)
     }
 }
 
 /// Convert a slice of f32 values to the sqlite-vec binary format.
 pub fn embedding_to_blob(embedding: &[f32]) -> Vec<u8> {
-    embedding
-        .iter()
-        .flat_map(|f| f.to_le_bytes())
-        .collect()
+    embedding.iter().flat_map(|f| f.to_le_bytes()).collect()
 }
 
 #[cfg(test)]

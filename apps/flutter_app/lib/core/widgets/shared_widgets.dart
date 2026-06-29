@@ -59,12 +59,18 @@ class _SkeletonBoxState extends State<SkeletonBox>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.radius),
             gradient: LinearGradient(
-              begin: Alignment(widget.width == double.infinity
-                  ? _animation.value - 2
-                  : _animation.value),
-              end: Alignment(widget.width == double.infinity
-                  ? _animation.value
-                  : _animation.value + 2),
+              begin: Alignment(
+                widget.width == double.infinity
+                    ? _animation.value - 2
+                    : _animation.value,
+                0.0,
+              ),
+              end: Alignment(
+                widget.width == double.infinity
+                    ? _animation.value
+                    : _animation.value + 2,
+                0.0,
+              ),
               colors: [baseColor, highlightColor, baseColor],
             ),
           ),

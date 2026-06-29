@@ -1,12 +1,13 @@
 //! Model manager — download, verify, and activate AI models.
 
 use crate::error::AiError;
-use crate::types::{AiModel, default_model_catalog};
+use crate::types::{default_model_catalog, AiModel};
 use reqwest::Client;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use tokio::io::AsyncWriteExt;
 use tracing::{debug, info, warn};
+use futures_util::StreamExt;
 
 pub struct ModelManager {
     models_dir: PathBuf,
@@ -49,7 +50,9 @@ impl ModelManager {
             .catalog
             .iter()
             .find(|m| m.id == model_id)
-            .ok_or_else(|| AiError::ModelNotLoaded { model_id: model_id.to_string() })?;
+            .ok_or_else(|| AiError::ModelNotLoaded {
+                model_id: model_id.to_string(),
+            })?;
 
         let url = format!(
             "https://huggingface.co/{}/resolve/main/{}",
@@ -92,7 +95,11 @@ impl ModelManager {
             file.write_all(&chunk).await?;
             downloaded += chunk.len() as u64;
             if downloaded % (50 * 1024 * 1024) == 0 {
-                debug!(model_id, downloaded_mb = downloaded / 1_000_000, "Downloading...");
+                debug!(
+                    model_id,
+                    downloaded_mb = downloaded / 1_000_000,
+                    "Downloading..."
+                );
             }
         }
 
@@ -103,7 +110,11 @@ impl ModelManager {
     pub fn model_path(&self, model_id: &str) -> Option<PathBuf> {
         let model = self.catalog.iter().find(|m| m.id == model_id)?;
         let path = self.models_dir.join(&model.hf_filename);
-        if path.exists() { Some(path) } else { None }
+        if path.exists() {
+            Some(path)
+        } else {
+            None
+        }
     }
 }
 

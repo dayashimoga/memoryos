@@ -1,39 +1,219 @@
-version: "3.9"
+
+# ─── Shared build args ────────────────────────────────────────────────────────
+x-rust-env: &rust-env
+  RUST_LOG: debug
+  RUST_BACKTRACE: 1
+  CARGO_HOME: /usr/local/cargo
+  CARGO_INCREMENTAL: "1"
+
+x-rust-volumes: &rust-volumes
+  - .:/workspace
+  - cargo-cache:/usr/local/cargo/registry
+  - cargo-git:/usr/local/cargo/git
+  - target-cache:/workspace/target
 
 services:
-  # ─── Development Builder ─────────────────────────────────────────────────────
+  # ─── Rust Build ─────────────────────────────────────────────────────────────
+  rust-build:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes: *rust-volumes
+    environment: *rust-env
+    working_dir: /workspace
+    command: cargo build --workspace --release
+    networks:
+      - memoryos
+
+  # ─── Rust Check (fast lint/typecheck) ───────────────────────────────────────
+  rust-check:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes: *rust-volumes
+    environment: *rust-env
+    working_dir: /workspace
+    command: >
+      bash -c "
+        cargo fmt --all -- --check &&
+        cargo clippy --all-targets --all-features -- -D warnings &&
+        cargo check --workspace
+      "
+    networks:
+      - memoryos
+
+  # ─── Rust Test ──────────────────────────────────────────────────────────────
+  rust-test:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes: *rust-volumes
+    environment: *rust-env
+    working_dir: /workspace
+    command: cargo test --workspace --all-features -- --test-threads=4
+    networks:
+      - memoryos
+
+  # ─── Rust Coverage ──────────────────────────────────────────────────────────
+  rust-coverage:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes: *rust-volumes
+    environment:
+      <<: *rust-env
+      RUSTFLAGS: -C instrument-coverage
+    working_dir: /workspace
+    command: >
+      bash -c "
+        cargo install cargo-tarpaulin --locked 2>/dev/null || true &&
+        cargo tarpaulin --workspace --out Xml --output-dir /workspace/coverage/ &&
+        echo '=== Coverage Report ===' &&
+        cargo tarpaulin --workspace --print-summary
+      "
+    networks:
+      - memoryos
+
+  # ─── Interactive dev shell ───────────────────────────────────────────────────
   builder:
     build:
       context: .
       dockerfile: docker/builder/Dockerfile
     image: memoryos-builder:latest
-    volumes:
-      - .:/workspace
-      - cargo-cache:/usr/local/cargo/registry
-      - target-cache:/workspace/target
-    environment:
-      - RUST_LOG=debug
-      - CARGO_HOME=/usr/local/cargo
+    volumes: *rust-volumes
+    environment: *rust-env
     working_dir: /workspace
     command: sleep infinity
+    stdin_open: true
+    tty: true
     networks:
       - memoryos
 
-  # ─── Test Runner ─────────────────────────────────────────────────────────────
-  tester:
+  # ─── Flutter Analyze ────────────────────────────────────────────────────────
+  flutter-analyze:
     build:
       context: .
-      dockerfile: docker/tester/Dockerfile
-    image: memoryos-tester:latest
+      dockerfile: docker/flutter/Dockerfile
+    image: memoryos-flutter:latest
     volumes:
+      - ./apps/flutter_app:/flutter_app
+      - flutter-pub-cache:/root/.pub-cache
+    working_dir: /flutter_app
+    command: >
+      bash -c "
+        flutter pub get &&
+        dart format --set-exit-if-changed . &&
+        flutter analyze --fatal-infos
+      "
+    networks:
+      - memoryos
+
+  # ─── Flutter Test ───────────────────────────────────────────────────────────
+  flutter-test:
+    build:
+      context: .
+      dockerfile: docker/flutter/Dockerfile
+    image: memoryos-flutter:latest
+    volumes:
+      - ./apps/flutter_app:/flutter_app
+      - flutter-pub-cache:/root/.pub-cache
+    working_dir: /flutter_app
+    command: >
+      bash -c "
+        flutter pub get &&
+        flutter test --coverage --reporter=expanded &&
+        echo '=== Coverage gate ===' &&
+        LINES_HIT=$$(grep -oP 'LH:\K\d+' coverage/lcov.info | awk '{s+=$$1}END{print s}') &&
+        LINES_FOUND=$$(grep -oP 'LF:\K\d+' coverage/lcov.info | awk '{s+=$$1}END{print s}') &&
+        if [ \"$$LINES_FOUND\" -gt 0 ]; then
+          python3 -c \"
+          hit=int('$$LINES_HIT'); found=int('$$LINES_FOUND')
+          pct=hit*100/found if found>0 else 0
+          print(f'Flutter coverage: {pct:.1f}%')
+          import sys; sys.exit(0 if pct>=90 else 1)
+          \"
+        fi
+      "
+    networks:
+      - memoryos
+
+  # ─── Flutter Web Dev Server ──────────────────────────────────────────────────
+  flutter-web:
+    build:
+      context: .
+      dockerfile: docker/flutter/Dockerfile
+    image: memoryos-flutter:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/flutter_app:/flutter_app
+      - flutter-pub-cache:/root/.pub-cache
+    working_dir: /flutter_app
+    command: >
+      bash -c "
+        flutter pub get &&
+        flutter run -d web-server --web-port 3000 --web-hostname 0.0.0.0 --web-renderer html
+      "
+    networks:
+      - memoryos
+
+  # ─── Flutter Web Build (production) ─────────────────────────────────────────
+  flutter-build-web:
+    build:
+      context: .
+      dockerfile: docker/flutter/Dockerfile
+    image: memoryos-flutter:latest
+    volumes:
+      - ./apps/flutter_app:/flutter_app
+      - flutter-pub-cache:/root/.pub-cache
+    working_dir: /flutter_app
+    command: >
+      bash -c "
+        flutter pub get &&
+        flutter build web --release --web-renderer canvaskit &&
+        echo 'Build complete: apps/flutter_app/build/web/'
+      "
+    networks:
+      - memoryos
+
+  # ─── Flutter Linux Build ─────────────────────────────────────────────────────
+  flutter-build-linux:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes:
+      - ./apps/flutter_app:/flutter_app
+      - flutter-pub-cache:/root/.pub-cache
       - .:/workspace
-      - cargo-cache:/usr/local/cargo/registry
       - target-cache:/workspace/target
-    environment:
-      - RUST_LOG=debug
-      - RUST_BACKTRACE=1
+    working_dir: /flutter_app
+    command: >
+      bash -c "
+        flutter pub get &&
+        flutter build linux --release &&
+        echo 'Linux build complete: apps/flutter_app/build/linux/'
+      "
+    networks:
+      - memoryos
+
+  # ─── Security Scan ──────────────────────────────────────────────────────────
+  security:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes: *rust-volumes
     working_dir: /workspace
-    command: bash -c "cargo test --workspace && flutter test"
+    command: >
+      bash -c "
+        cargo install cargo-audit --locked 2>/dev/null || true &&
+        cargo audit
+      "
     networks:
       - memoryos
 
@@ -52,18 +232,29 @@ services:
     networks:
       - memoryos
 
-  # ─── Flutter Dev Server (web preview) ────────────────────────────────────────
-  flutter-web:
+  # ─── Tester (combined Rust + Flutter) ───────────────────────────────────────
+  tester:
     build:
       context: .
-      dockerfile: docker/flutter/Dockerfile
-    image: memoryos-flutter:latest
-    ports:
-      - "3000:3000"
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
     volumes:
-      - ./apps/flutter_app:/flutter_app
-    working_dir: /flutter_app
-    command: flutter run -d web-server --web-port 3000 --web-hostname 0.0.0.0
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target-cache:/workspace/target
+      - flutter-pub-cache:/root/.pub-cache
+    environment: *rust-env
+    working_dir: /workspace
+    command: >
+      bash -c "
+        echo '=== Rust Tests ===' &&
+        cargo test --workspace --all-features -- --test-threads=4 &&
+        echo '=== Flutter Tests ===' &&
+        cd apps/flutter_app &&
+        flutter pub get &&
+        flutter test --coverage --reporter=compact
+      "
     networks:
       - memoryos
 
@@ -73,4 +264,6 @@ networks:
 
 volumes:
   cargo-cache:
+  cargo-git:
   target-cache:
+  flutter-pub-cache:

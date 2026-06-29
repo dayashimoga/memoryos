@@ -1,7 +1,7 @@
 //! AI engine types.
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Supported AI model families.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

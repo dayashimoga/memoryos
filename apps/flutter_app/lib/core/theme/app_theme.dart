@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/cupertino.dart';
 
 /// MemoryOS Design System — tokens, typography, motion, elevation.
 ///
@@ -123,7 +124,7 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: DesignTokens.lightCard,
         surfaceTintColor: Colors.transparent,
@@ -281,7 +282,7 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: DesignTokens.darkCard,
         surfaceTintColor: Colors.transparent,

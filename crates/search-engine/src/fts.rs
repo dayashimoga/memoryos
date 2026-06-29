@@ -35,7 +35,9 @@ impl FtsSearcher {
         "#;
 
         let pattern = format!("%{}%", query);
-        let mut stmt = self.conn.prepare(sql)
+        let mut stmt = self
+            .conn
+            .prepare(sql)
             .map_err(|e| SearchError::Database(e.to_string()))?;
 
         let results = stmt
@@ -80,8 +82,9 @@ mod tests {
                 embedding_id INTEGER, is_encrypted INTEGER DEFAULT 0,
                 indexing_status TEXT DEFAULT '\"Pending\"',
                 created_at TEXT, modified_at TEXT, indexed_at TEXT
-            );"
-        ).unwrap();
+            );",
+        )
+        .unwrap();
 
         let searcher = FtsSearcher { conn };
         let results = searcher.search("kubernetes", 10).unwrap();

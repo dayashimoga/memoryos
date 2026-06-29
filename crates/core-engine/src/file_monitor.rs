@@ -5,7 +5,9 @@
 
 use crate::error::CoreError;
 use crossbeam_channel::{bounded, Receiver, Sender};
-use notify::{Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{
+    Config as NotifyConfig, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher,
+};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::thread;
@@ -112,29 +114,13 @@ impl FileMonitor {
     /// Map a `notify::Event` to zero or more `FileEvent`s.
     fn map_event(event: Event) -> Vec<FileEvent> {
         match event.kind {
-            EventKind::Create(_) => event
-                .paths
-                .into_iter()
-                .map(FileEvent::Created)
-                .collect(),
-            EventKind::Modify(_) => event
-                .paths
-                .into_iter()
-                .map(FileEvent::Modified)
-                .collect(),
-            EventKind::Remove(_) => event
-                .paths
-                .into_iter()
-                .map(FileEvent::Removed)
-                .collect(),
+            EventKind::Create(_) => event.paths.into_iter().map(FileEvent::Created).collect(),
+            EventKind::Modify(_) => event.paths.into_iter().map(FileEvent::Modified).collect(),
+            EventKind::Remove(_) => event.paths.into_iter().map(FileEvent::Removed).collect(),
             EventKind::Access(_) => vec![],
             EventKind::Any | EventKind::Other => {
                 // Could be a rename — emit Modified for each path
-                event
-                    .paths
-                    .into_iter()
-                    .map(FileEvent::Modified)
-                    .collect()
+                event.paths.into_iter().map(FileEvent::Modified).collect()
             }
         }
     }

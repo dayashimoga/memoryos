@@ -1,41 +1,85 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memoryos/core/blocs/app_blocs.dart';
+import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
-/// AI Chat page — fully-featured conversational interface over the knowledge base.
-class ChatPage extends StatefulWidget {
+/// AI Chat — wired to AiBloc for real model status and conversation.
+class ChatPage extends StatelessWidget {
   const ChatPage({super.key});
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  Widget build(BuildContext context) {
+    return BlocConsumer<AiBloc, AiState>(
+      listener: (context, state) {
+        if (state.status == AiStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error ?? 'AI error'),
+              backgroundColor: DesignTokens.error,
+            ),
+          );
+        }
+      },
+      builder: (context, state) => _ChatView(aiState: state),
+    );
+  }
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatView extends StatefulWidget {
+  final AiState aiState;
+  const _ChatView({required this.aiState});
+
+  @override
+  State<_ChatView> createState() => _ChatViewState();
+}
+
+class _ChatViewState extends State<_ChatView> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
 
-  final _messages = <_ChatMessage>[
-    _ChatMessage(
-      role: ChatRole.assistant,
-      content:
-          "Hi! I'm your MemoryOS AI assistant. I can answer questions about your files, summarize documents, generate flashcards, and help you find anything in your knowledge base.\n\nDownload a model in **Settings → AI Models** to enable full AI capabilities.",
-    ),
-  ];
-  bool _isTyping = false;
-  bool _modelLoaded = false;
-
   static const _quickPrompts = [
-    ('What did I learn about Kubernetes?', Icons.cloud_rounded),
-    ('Summarize my cloud security notes', Icons.security_rounded),
-    ('Find my recent invoices', Icons.receipt_rounded),
-    ('What chess openings have I studied?', Icons.sports_esports_rounded),
+    ('Summarize my cloud notes', Icons.cloud_rounded),
+    ('What did I learn this week?', Icons.school_rounded),
+    ('Find my security documents', Icons.security_rounded),
     ('Create flashcards from my AWS notes', Icons.style_rounded),
-    ('Explain this screenshot', Icons.screenshot_rounded),
+    ('What chess openings have I studied?', Icons.sports_esports_rounded),
+    ('Suggest related topics to explore', Icons.explore_rounded),
   ];
+
+  void _send() {
+    final text = _controller.text.trim();
+    if (text.isEmpty) return;
+    HapticFeedback.selectionClick();
+    context.read<AiBloc>().add(AiSendMessage(text));
+    _controller.clear();
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent + 120,
+          duration: const Duration(milliseconds: 350),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _ChatView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.aiState.messages.length < widget.aiState.messages.length) {
+      _scrollToBottom();
+    }
+  }
 
   @override
   void dispose() {
@@ -45,49 +89,10 @@ class _ChatPageState extends State<ChatPage> {
     super.dispose();
   }
 
-  void _send() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
-
-    HapticFeedback.selectionClick();
-    setState(() {
-      _messages.add(_ChatMessage(role: ChatRole.user, content: text));
-      _controller.clear();
-      _isTyping = true;
-    });
-    _scrollToBottom();
-
-    Future.delayed(const Duration(milliseconds: 1400), () {
-      if (!mounted) return;
-      setState(() {
-        _isTyping = false;
-        _messages.add(_ChatMessage(
-          role: ChatRole.assistant,
-          content: _modelLoaded
-              ? 'Based on your indexed knowledge base...'
-              : 'No AI model is loaded. Please download a model from **Settings → AI Models** to get real responses.',
-        ));
-      });
-      _scrollToBottom();
-    });
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent + 100,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    final state = widget.aiState;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -104,13 +109,23 @@ class _ChatPageState extends State<ChatPage> {
                         fontWeight: FontWeight.w700,
                         fontSize: 16)),
                 Text(
-                  _modelLoaded ? 'Model ready' : 'No model loaded',
+                  switch (state.status) {
+                    AiStatus.checking => 'Checking model...',
+                    AiStatus.ready => 'Model active',
+                    AiStatus.noModel => 'No model loaded',
+                    AiStatus.thinking => 'Thinking...',
+                    AiStatus.error => 'Error',
+                    AiStatus.idle => 'Idle',
+                  },
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 11,
-                    color: _modelLoaded
-                        ? DesignTokens.success
-                        : const Color(0xFF94A3B8),
+                    color: switch (state.status) {
+                      AiStatus.ready => DesignTokens.success,
+                      AiStatus.thinking => DesignTokens.accent,
+                      AiStatus.error => DesignTokens.error,
+                      _ => const Color(0xFF94A3B8),
+                    },
                   ),
                 ),
               ],
@@ -119,120 +134,84 @@ class _ChatPageState extends State<ChatPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.auto_awesome_outlined),
+            icon: const Icon(Icons.memory_rounded),
             onPressed: () => context.go('/models'),
-            tooltip: 'Manage AI Models',
+            tooltip: 'AI Models',
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded),
-            onPressed: () => setState(() {
-              _messages.removeWhere((m) => m.role == ChatRole.user);
-              _messages.removeWhere((m) =>
-                  _messages.indexOf(m) > 0 && m.role == ChatRole.assistant);
-            }),
+            onPressed: state.messages.isEmpty
+                ? null
+                : () => context.read<AiBloc>().add(AiClearConversation()),
             tooltip: 'Clear conversation',
           ),
         ],
       ),
       body: Column(
         children: [
-          // ── Model not loaded banner ────────────────────────
-          if (!_modelLoaded)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: DesignTokens.warning.withOpacity(0.08),
-              child: Row(
-                children: [
-                  const Icon(Icons.info_outline_rounded,
-                      size: 16, color: DesignTokens.warning),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Download an AI model to enable real responses',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 12,
-                        color: DesignTokens.warning,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/models'),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: const Size(0, 32),
-                    ),
-                    child: const Text('Get Models',
-                        style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                            color: DesignTokens.warning)),
-                  ),
-                ],
-              ),
-            ),
+          // No model banner
+          if (state.status == AiStatus.noModel)
+            _ModelBanner(),
 
-          // ── Messages ───────────────────────────────────────
+          // Messages
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(16),
-              physics: const BouncingScrollPhysics(),
-              itemCount: _messages.length + (_isTyping ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _messages.length) {
-                  return _TypingBubble()
-                      .animate()
-                      .fadeIn()
-                      .slideY(begin: 0.1, end: 0);
-                }
-                return _MessageBubble(message: _messages[index])
-                    .animate()
-                    .fadeIn(duration: 200.ms)
-                    .slideY(begin: 0.06, end: 0);
-              },
-            ),
+            child: state.messages.isEmpty
+                ? _WelcomeView(prompts: _quickPrompts, onSelect: (p) {
+                    _controller.text = p;
+                    _send();
+                  })
+                : ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: state.messages.length +
+                        (state.status == AiStatus.thinking ? 1 : 0),
+                    itemBuilder: (context, i) {
+                      if (i == state.messages.length) {
+                        return _TypingBubble()
+                            .animate()
+                            .fadeIn()
+                            .slideY(begin: 0.08, end: 0);
+                      }
+                      return _MessageBubble(message: state.messages[i])
+                          .animate()
+                          .fadeIn(duration: 200.ms)
+                          .slideY(begin: 0.06, end: 0);
+                    },
+                  ),
           ),
 
-          // ── Quick prompts ──────────────────────────────────
-          if (_messages.length <= 1)
+          // Quick prompts (only when empty)
+          if (state.messages.isEmpty)
             SizedBox(
               height: 44,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 physics: const BouncingScrollPhysics(),
-                children: _quickPrompts
-                    .map((p) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ActionChip(
-                            avatar: Icon(p.$2, size: 14),
-                            label: Text(p.$1,
-                                style: const TextStyle(
-                                    fontFamily: 'Inter', fontSize: 12)),
-                            onPressed: () {
-                              _controller.text = p.$1;
-                              _send();
-                            },
-                          ),
-                        ))
-                    .toList(),
+                children: _quickPrompts.map((p) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ActionChip(
+                    avatar: Icon(p.$2, size: 14),
+                    label: Text(p.$1,
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
+                    onPressed: () {
+                      _controller.text = p.$1;
+                      _send();
+                    },
+                  ),
+                )).toList(),
               ),
             ),
 
-          // ── Input area ─────────────────────────────────────
+          // Input area
           Container(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             decoration: BoxDecoration(
-              color: isDark
-                  ? DesignTokens.darkSurface
-                  : DesignTokens.lightSurface,
+              color: isDark ? DesignTokens.darkSurface : DesignTokens.lightSurface,
               border: Border(
                 top: BorderSide(
-                  color: isDark
-                      ? DesignTokens.darkBorder
-                      : DesignTokens.lightBorder,
+                  color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
                 ),
               ),
             ),
@@ -245,11 +224,8 @@ class _ChatPageState extends State<ChatPage> {
                     child: Container(
                       constraints: const BoxConstraints(maxHeight: 120),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? DesignTokens.darkCard
-                            : DesignTokens.lightBg,
-                        borderRadius:
-                            BorderRadius.circular(DesignTokens.radiusXl),
+                        color: isDark ? DesignTokens.darkCard : DesignTokens.lightBg,
+                        borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
                         border: Border.all(
                             color: isDark
                                 ? DesignTokens.darkBorder
@@ -259,11 +235,11 @@ class _ChatPageState extends State<ChatPage> {
                         controller: _controller,
                         focusNode: _focusNode,
                         maxLines: null,
-                        textInputAction: TextInputAction.newline,
-                        keyboardType: TextInputType.multiline,
                         style: Theme.of(context).textTheme.bodyMedium,
                         decoration: InputDecoration(
-                          hintText: 'Ask about your memories...',
+                          hintText: state.modelLoaded
+                              ? 'Ask about your memories...'
+                              : 'Download a model to start chatting...',
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -282,27 +258,38 @@ class _ChatPageState extends State<ChatPage> {
                   ),
                   const SizedBox(width: 10),
                   GestureDetector(
-                    onTap: _send,
+                    onTap: state.status == AiStatus.thinking ? null : _send,
                     child: AnimatedContainer(
                       duration: DesignTokens.durationFast,
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [DesignTokens.brand, DesignTokens.accent],
+                        gradient: LinearGradient(
+                          colors: state.status == AiStatus.thinking
+                              ? [const Color(0xFF94A3B8), const Color(0xFF64748B)]
+                              : [DesignTokens.brand, DesignTokens.accent],
                         ),
-                        borderRadius:
-                            BorderRadius.circular(DesignTokens.radiusFull),
+                        borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
                         boxShadow: [
                           BoxShadow(
-                            color: DesignTokens.brand.withOpacity(0.35),
+                            color: DesignTokens.brand.withOpacity(
+                                state.status == AiStatus.thinking ? 0 : 0.35),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.arrow_upward_rounded,
-                          color: Colors.white, size: 20),
+                      child: state.status == AiStatus.thinking
+                          ? const Center(
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.arrow_upward_rounded,
+                              color: Colors.white, size: 20),
                     ),
                   ),
                 ],
@@ -315,25 +302,90 @@ class _ChatPageState extends State<ChatPage> {
   }
 }
 
-// ─── Message Bubble ───────────────────────────────────────────────────────────
+// ─── Model Banner ─────────────────────────────────────────────────────────────
 
-enum ChatRole { user, assistant }
-
-class _ChatMessage {
-  final ChatRole role;
-  final String content;
-  final DateTime timestamp;
-  _ChatMessage({required this.role, required this.content})
-      : timestamp = DateTime.now();
+class _ModelBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: DesignTokens.warning.withOpacity(0.08),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, size: 16, color: DesignTokens.warning),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'No AI model loaded — responses are powered by fallback logic',
+              style: const TextStyle(
+                  fontFamily: 'Inter', fontSize: 12, color: DesignTokens.warning),
+            ),
+          ),
+          TextButton(
+            onPressed: () => GoRouter.of(context).go('/models'),
+            style: TextButton.styleFrom(minimumSize: const Size(0, 32)),
+            child: const Text('Get Models',
+                style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                    color: DesignTokens.warning)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+// ─── Welcome View ─────────────────────────────────────────────────────────────
+
+class _WelcomeView extends StatelessWidget {
+  final List<(String, IconData)> prompts;
+  final ValueChanged<String> onSelect;
+
+  const _WelcomeView({required this.prompts, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _AiAvatar(radius: 36),
+            const SizedBox(height: 20),
+            Text('MemoryOS AI',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text(
+              'Ask anything about your files, get summaries,\ngenerate flashcards, or explore your knowledge base.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: const Color(0xFF64748B),
+                    height: 1.5,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Message Bubble ───────────────────────────────────────────────────────────
+
 class _MessageBubble extends StatelessWidget {
-  final _ChatMessage message;
+  final ChatMessage message;
   const _MessageBubble({required this.message});
 
   @override
   Widget build(BuildContext context) {
-    final isUser = message.role == ChatRole.user;
+    final isUser = message.role == 'user';
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Padding(
@@ -354,7 +406,8 @@ class _MessageBubble extends StatelessWidget {
                 color: isUser
                     ? DesignTokens.brand
                     : (isDark ? DesignTokens.darkCard : DesignTokens.lightSurface),
-                borderRadius: BorderRadius.circular(DesignTokens.radiusLg).copyWith(
+                borderRadius:
+                    BorderRadius.circular(DesignTokens.radiusLg).copyWith(
                   bottomRight: isUser ? const Radius.circular(4) : null,
                   bottomLeft: !isUser ? const Radius.circular(4) : null,
                 ),
@@ -373,7 +426,7 @@ class _MessageBubble extends StatelessWidget {
                           : (isDark
                               ? const Color(0xFFCBD5E1)
                               : const Color(0xFF1E293B)),
-                      height: 1.5,
+                      height: 1.55,
                     ),
               ),
             ),
@@ -409,14 +462,11 @@ class _TypingBubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
-              color:
-                  isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
+              color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
               borderRadius: BorderRadius.circular(DesignTokens.radiusLg)
                   .copyWith(bottomLeft: const Radius.circular(4)),
               border: Border.all(
-                  color: isDark
-                      ? DesignTokens.darkBorder
-                      : DesignTokens.lightBorder),
+                  color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -426,7 +476,7 @@ class _TypingBubble extends StatelessWidget {
                   width: 7,
                   height: 7,
                   margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: DesignTokens.brand,
                     shape: BoxShape.circle,
                   ),

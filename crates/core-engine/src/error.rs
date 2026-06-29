@@ -27,4 +27,7 @@ pub enum CoreError {
 
     #[error("Operation cancelled")]
     Cancelled,
+
+    #[error("Internal error: {0}")]
+    Internal(String),
 }

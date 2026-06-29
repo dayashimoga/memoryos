@@ -54,15 +54,83 @@ impl Category {
         let mut categories = Vec::new();
 
         let rules: &[(&[&str], Category)] = &[
-            (&["aws", "azure", "gcp", "kubernetes", "docker", "cloud", "ec2", "s3"], Category::Cloud),
-            (&["security", "vulnerability", "cve", "exploit", "firewall", "tls", "ssl"], Category::Security),
-            (&["rust", "python", "javascript", "typescript", "code", "function", "class"], Category::Development),
-            (&["invoice", "billing", "payment", "amount due", "vat", "tax id"], Category::Invoice),
-            (&["receipt", "total", "subtotal", "cash", "card"], Category::Receipt),
-            (&["meeting", "agenda", "minutes", "attendees", "action items"], Category::Meeting),
-            (&["chess", "opening", "endgame", "pawn", "rook", "bishop", "queen", "king"], Category::Chess),
-            (&["learn", "tutorial", "course", "study", "flashcard", "quiz"], Category::Learning),
-            (&["flight", "hotel", "itinerary", "passport", "visa", "booking"], Category::Travel),
+            (
+                &[
+                    "aws",
+                    "azure",
+                    "gcp",
+                    "kubernetes",
+                    "docker",
+                    "cloud",
+                    "ec2",
+                    "s3",
+                ],
+                Category::Cloud,
+            ),
+            (
+                &[
+                    "security",
+                    "vulnerability",
+                    "cve",
+                    "exploit",
+                    "firewall",
+                    "tls",
+                    "ssl",
+                ],
+                Category::Security,
+            ),
+            (
+                &[
+                    "rust",
+                    "python",
+                    "javascript",
+                    "typescript",
+                    "code",
+                    "function",
+                    "class",
+                ],
+                Category::Development,
+            ),
+            (
+                &[
+                    "invoice",
+                    "billing",
+                    "payment",
+                    "amount due",
+                    "vat",
+                    "tax id",
+                ],
+                Category::Invoice,
+            ),
+            (
+                &["receipt", "total", "subtotal", "cash", "card"],
+                Category::Receipt,
+            ),
+            (
+                &["meeting", "agenda", "minutes", "attendees", "action items"],
+                Category::Meeting,
+            ),
+            (
+                &[
+                    "chess", "opening", "endgame", "pawn", "rook", "bishop", "queen", "king",
+                ],
+                Category::Chess,
+            ),
+            (
+                &["learn", "tutorial", "course", "study", "flashcard", "quiz"],
+                Category::Learning,
+            ),
+            (
+                &[
+                    "flight",
+                    "hotel",
+                    "itinerary",
+                    "passport",
+                    "visa",
+                    "booking",
+                ],
+                Category::Travel,
+            ),
         ];
 
         for (keywords, category) in rules {
@@ -80,10 +148,7 @@ impl Category {
 
 /// Categorize a file based on its text content.
 /// Uses keyword heuristics first, then AI for ambiguous cases.
-pub async fn categorize(
-    text: &str,
-    _model_id: Option<&str>,
-) -> Result<Vec<Category>, AiError> {
+pub async fn categorize(text: &str, _model_id: Option<&str>) -> Result<Vec<Category>, AiError> {
     // Fast path: keyword-based classification
     let keyword_cats = Category::classify_by_keywords(text);
 

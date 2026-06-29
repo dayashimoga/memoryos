@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:flutter/material.dart';
 import 'package:memoryos/features/home/pages/home_page.dart';
 import 'package:memoryos/features/search/pages/search_page.dart';
 import 'package:memoryos/features/timeline/pages/timeline_page.dart';
@@ -15,17 +16,23 @@ import 'package:memoryos/features/shell/shell_page.dart';
 import 'package:memoryos/features/inbox/pages/inbox_page.dart';
 import 'package:memoryos/features/galaxy/pages/galaxy_page.dart';
 
-/// Application router — GoRouter ShellRoute with all feature routes.
+/// Application router — GoRouter ShellRoute with all v1.2 feature routes.
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/',
     routes: [
+      // ── Onboarding (outside shell) ──────────────────────────────
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingPage(),
       ),
+
+      // ── Main shell ──────────────────────────────────────────────
       ShellRoute(
-        builder: (context, state, child) => ShellPage(child: child),
+        builder: (context, state, child) => ShellPage(
+          child: child,
+          location: state.uri.path,
+        ),
         routes: [
           GoRoute(
             path: '/',
@@ -71,11 +78,11 @@ class AppRouter {
           ),
           GoRoute(
             path: '/inbox',
-            builder: (context, state) => const SmartInboxPage(),
+            builder: (context, state) => const InboxPage(),
           ),
           GoRoute(
             path: '/galaxy',
-            builder: (context, state) => const MemoryGalaxyPage(),
+            builder: (context, state) => const GalaxyPage(),
           ),
           GoRoute(
             path: '/file/:id',

@@ -1,135 +1,152 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memoryos/core/blocs/app_blocs.dart';
+import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
+import 'package:memoryos/core/widgets/command_palette.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
-/// Fully redesigned home dashboard — intelligent workspace.
+/// Redesigned Home Dashboard — wired to HomeBloc for real data.
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _HomeAppBar(),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            sliver: SliverToBoxAdapter(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Search bar
-                  _HeroSearchBar()
-                      .animate()
-                      .fadeIn(duration: 300.ms),
-                  const SizedBox(height: 20),
-
-                  // Storage ring + stats
-                  _StorageOverviewCard()
-                      .animate()
-                      .fadeIn(delay: 60.ms, duration: 300.ms)
-                      .slideY(begin: 0.04, end: 0),
-                  const SizedBox(height: 20),
-
-                  // AI Suggestions banner
-                  _AiSuggestionsBanner()
-                      .animate()
-                      .fadeIn(delay: 120.ms, duration: 300.ms),
-                  const SizedBox(height: 20),
-
-                  // Quick actions
-                  SectionHeader(
-                    title: 'Quick Actions',
-                    trailing: null,
-                  ),
-                  const SizedBox(height: 8),
-                  _QuickActionsRow()
-                      .animate()
-                      .fadeIn(delay: 180.ms, duration: 300.ms),
-                  const SizedBox(height: 20),
-
-                  // Smart collections
-                  SectionHeader(
-                    title: 'Smart Collections',
-                    action: 'See all',
-                    onAction: () => context.go('/collections'),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
+    return BlocConsumer<HomeBloc, HomeState>(
+      listener: (context, state) {
+        if (state.status == HomeStatus.error) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error ?? 'An error occurred'),
+              backgroundColor: DesignTokens.error,
             ),
-          ),
+          );
+        }
+      },
+      builder: (context, state) {
+        return RefreshIndicator(
+          onRefresh: () async {
+            context.read<HomeBloc>().add(HomeRefreshRequested());
+            await Future.delayed(const Duration(milliseconds: 800));
+          },
+          color: DesignTokens.brand,
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              _HomeAppBar(),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── Search / Command Bar ────────────────────
+                      _HeroSearchBar()
+                          .animate()
+                          .fadeIn(duration: 300.ms),
+                      const SizedBox(height: 20),
 
-          // Smart collections horizontal scroll
-          SliverToBoxAdapter(
-            child: _SmartCollectionsRow()
-                .animate()
-                .fadeIn(delay: 240.ms, duration: 300.ms),
-          ),
+                      // ── Storage Overview ─────────────────────────
+                      if (state.status == HomeStatus.loading)
+                        const SkeletonBox(height: 120, radius: 16)
+                            .animate()
+                            .fadeIn()
+                      else
+                        _StorageCard(
+                          stats: state.stats,
+                          indexStats: state.indexStats,
+                        )
+                            .animate()
+                            .fadeIn(delay: 60.ms)
+                            .slideY(begin: 0.04, end: 0),
 
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-            sliver: SliverToBoxAdapter(
-              child: SectionHeader(
-                title: 'Recent Files',
-                action: 'Timeline',
-                onAction: () => context.go('/timeline'),
+                      const SizedBox(height: 20),
+
+                      // ── AI status banner ─────────────────────────
+                      _AiBanner()
+                          .animate()
+                          .fadeIn(delay: 100.ms),
+                      const SizedBox(height: 20),
+
+                      // ── Quick actions ─────────────────────────────
+                      const SectionHeader(title: 'Quick Actions'),
+                      const SizedBox(height: 8),
+                      _QuickActions()
+                          .animate()
+                          .fadeIn(delay: 140.ms),
+                      const SizedBox(height: 20),
+
+                      // ── Recent files header ───────────────────────
+                      SectionHeader(
+                        title: 'Recent Files',
+                        action: 'Timeline',
+                        onAction: () => context.go('/timeline'),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
 
-          // Recent files list — virtualized
-          SliverPadding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _RichFileCard(
-                  entry: _demoEntries[index % _demoEntries.length],
-                  index: index,
+              // ── Recent files list ──────────────────────────────
+              if (state.status == HomeStatus.loading)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: const SkeletonBox(height: 80, radius: 12),
+                      ).animate().fadeIn(delay: (i * 40).ms),
+                      childCount: 6,
+                    ),
+                  ),
                 )
-                    .animate()
-                    .fadeIn(delay: (260 + index * 30).ms, duration: 250.ms)
-                    .slideX(begin: 0.03, end: 0),
-                childCount: 12,
-              ),
-            ),
-          ),
+              else if (state.recentFiles.isEmpty)
+                SliverToBoxAdapter(
+                  child: EmptyStateWidget(
+                    icon: Icons.inbox_outlined,
+                    title: 'No files yet',
+                    subtitle: 'Import files to start building your Memory Library.',
+                    actionLabel: 'Import Files',
+                    onAction: () => _showImportSheet(context),
+                    iconColor: DesignTokens.brand,
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, i) => _FileCard(entry: state.recentFiles[i], index: i)
+                          .animate()
+                          .fadeIn(delay: (i * 25).ms, duration: 220.ms)
+                          .slideX(begin: 0.03, end: 0),
+                      childCount: state.recentFiles.length,
+                    ),
+                  ),
+                ),
 
-          const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-        ],
-      ),
-      floatingActionButton: _ContextualFab(),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+            ],
+          ),
+        );
+      },
     );
   }
-}
 
-// ─── Demo Data ────────────────────────────────────────────────────────────────
-
-const _demoEntries = [
-  _DemoEntry('kubernetes-architecture.png', 'png', 2_400_000, ['cloud', 'k8s'], 'Architecture diagram for microservices deployment'),
-  _DemoEntry('aws-security-notes.pdf', 'pdf', 1_100_000, ['aws', 'security'], 'IAM best practices and VPC configuration notes'),
-  _DemoEntry('meeting-recording.mp3', 'mp3', 45_200_000, ['meeting', 'work'], 'Weekly sync — Q3 roadmap discussion'),
-  _DemoEntry('invoice-2024-11.xlsx', 'xlsx', 234_000, ['finance', 'invoice'], 'November 2024 client invoice — \$4,500'),
-  _DemoEntry('chess-openings.md', 'md', 88_000, ['chess', 'learning'], 'Sicilian Defense variations and key lines'),
-  _DemoEntry('tutorial-video.mp4', 'mp4', 180_000_000, ['learning', 'dev'], 'Flutter state management deep dive'),
-];
-
-class _DemoEntry {
-  final String filename;
-  final String ext;
-  final int sizeBytes;
-  final List<String> tags;
-  final String summary;
-  const _DemoEntry(this.filename, this.ext, this.sizeBytes, this.tags, this.summary);
-
-  String get formattedSize {
-    if (sizeBytes < 1024 * 1024) return '${(sizeBytes / 1024).toStringAsFixed(0)} KB';
-    if (sizeBytes < 1024 * 1024 * 1024) return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(sizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  void _showImportSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+            top: Radius.circular(DesignTokens.radiusXl)),
+      ),
+      builder: (_) => _ImportSheet(),
+    );
   }
 }
 
@@ -138,39 +155,31 @@ class _DemoEntry {
 class _HomeAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-
     return SliverAppBar(
       floating: true,
       snap: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       surfaceTintColor: Colors.transparent,
       titleSpacing: 16,
-      title: Row(
-        children: [
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Memory',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+      title: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: 'Memory',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.8,
                   ),
-                ),
-                TextSpan(
-                  text: 'OS',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            ),
+            TextSpan(
+              text: 'OS',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.8,
                     color: DesignTokens.brand,
                   ),
-                ),
-              ],
             ),
-          ),
-          const Spacer(),
-        ],
+          ],
+        ),
       ),
       actions: [
         IconButton(
@@ -179,14 +188,16 @@ class _HomeAppBar extends StatelessWidget {
           tooltip: 'Search (⌘K)',
         ),
         IconButton(
-          icon: Badge(
-            label: const Text('3'),
-            child: const Icon(Icons.notifications_outlined),
-          ),
-          onPressed: () {},
-          tooltip: 'Notifications',
+          icon: const Icon(Icons.auto_awesome_outlined),
+          onPressed: () => context.go('/chat'),
+          tooltip: 'AI Assistant',
         ),
-        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.settings_rounded),
+          onPressed: () => context.go('/settings'),
+          tooltip: 'Settings',
+        ),
+        const SizedBox(width: 4),
       ],
     );
   }
@@ -198,7 +209,6 @@ class _HeroSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Hero(
       tag: 'search_bar',
       child: Material(
@@ -213,24 +223,14 @@ class _HeroSearchBar extends StatelessWidget {
               border: Border.all(
                 color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
               ),
-              boxShadow: isDark
-                  ? null
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
             ),
             child: Row(
               children: [
-                Icon(Icons.search_rounded,
-                    color: DesignTokens.brand, size: 20),
+                const Icon(Icons.search_rounded, color: DesignTokens.brand, size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Search your memories...',
+                    'Search files, ask AI, run commands...',
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                           color: isDark
                               ? const Color(0xFF475569)
@@ -238,26 +238,7 @@ class _HeroSearchBar extends StatelessWidget {
                         ),
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: DesignTokens.brand.withOpacity(0.08),
-                    borderRadius:
-                        BorderRadius.circular(DesignTokens.radiusSm),
-                    border: Border.all(
-                        color: DesignTokens.brand.withOpacity(0.2)),
-                  ),
-                  child: const Text(
-                    '⌘K',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: DesignTokens.brand,
-                      fontFamily: 'Inter',
-                    ),
-                  ),
-                ),
+                _ShortcutBadge('⌘K'),
               ],
             ),
           ),
@@ -267,12 +248,44 @@ class _HeroSearchBar extends StatelessWidget {
   }
 }
 
-// ─── Storage Overview Card ────────────────────────────────────────────────────
+class _ShortcutBadge extends StatelessWidget {
+  final String label;
+  const _ShortcutBadge(this.label);
 
-class _StorageOverviewCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: DesignTokens.brand.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(DesignTokens.radiusSm),
+        border: Border.all(color: DesignTokens.brand.withOpacity(0.2)),
+      ),
+      child: Text(label,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: DesignTokens.brand,
+          )),
+    );
+  }
+}
+
+// ─── Storage Card ─────────────────────────────────────────────────────────────
+
+class _StorageCard extends StatelessWidget {
+  final StorageStats stats;
+  final IndexStats indexStats;
+
+  const _StorageCard({required this.stats, required this.indexStats});
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final usageRatio = stats.totalSizeBytes > 0 && stats.usedSizeBytes > 0
+        ? stats.usedSizeBytes / stats.totalSizeBytes
+        : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(DesignTokens.space16),
@@ -299,7 +312,7 @@ class _StorageOverviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Storage ring
+              // Ring
               SizedBox(
                 width: 72,
                 height: 72,
@@ -307,7 +320,7 @@ class _StorageOverviewCard extends StatelessWidget {
                   alignment: Alignment.center,
                   children: [
                     CircularProgressIndicator(
-                      value: 0.0,
+                      value: usageRatio.clamp(0.0, 1.0),
                       strokeWidth: 6,
                       backgroundColor: DesignTokens.brand.withOpacity(0.1),
                       color: DesignTokens.brand,
@@ -316,7 +329,7 @@ class _StorageOverviewCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '0%',
+                          '${(usageRatio * 100).toStringAsFixed(0)}%',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontWeight: FontWeight.w800,
@@ -324,15 +337,12 @@ class _StorageOverviewCard extends StatelessWidget {
                             color: DesignTokens.brand,
                           ),
                         ),
-                        Text(
+                        const Text(
                           'used',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
                             fontSize: 9,
-                            color: isDark
-                                ? const Color(0xFF64748B)
-                                : const Color(0xFF94A3B8),
+                            color: Color(0xFF64748B),
                           ),
                         ),
                       ],
@@ -352,23 +362,14 @@ class _StorageOverviewCard extends StatelessWidget {
                           .titleSmall
                           ?.copyWith(fontWeight: FontWeight.w700),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
-                        _MiniStat(
-                            label: 'Files',
-                            value: '0',
-                            color: DesignTokens.brand),
+                        _MiniStat(label: 'Files', value: '${stats.totalFiles}', color: DesignTokens.brand),
                         const SizedBox(width: 16),
-                        _MiniStat(
-                            label: 'Tags',
-                            value: '0',
-                            color: DesignTokens.accent),
+                        _MiniStat(label: 'Indexed', value: '${indexStats.indexedFiles}', color: DesignTokens.success),
                         const SizedBox(width: 16),
-                        _MiniStat(
-                            label: 'Groups',
-                            value: '0',
-                            color: DesignTokens.tertiary),
+                        _MiniStat(label: 'Pending', value: '${indexStats.pendingFiles}', color: DesignTokens.warning),
                       ],
                     ),
                   ],
@@ -376,52 +377,48 @@ class _StorageOverviewCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          // Recoverable storage hint
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: DesignTokens.success.withOpacity(0.08),
-              borderRadius:
-                  BorderRadius.circular(DesignTokens.radiusMd),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.auto_delete_outlined,
-                    size: 14, color: DesignTokens.success),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Index files to discover recoverable storage',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      color: DesignTokens.success,
-                      fontWeight: FontWeight.w500,
+          if (stats.recoverableBytes > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: DesignTokens.success.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_delete_outlined,
+                      size: 14, color: DesignTokens.success),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '${stats.formattedRecoverable} recoverable — duplicates detected',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 11,
+                        color: DesignTokens.success,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/duplicates'),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    minimumSize: const Size(0, 0),
-                  ),
-                  child: const Text(
-                    'Scan',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: DesignTokens.success,
-                      fontFamily: 'Inter',
+                  TextButton(
+                    onPressed: () => GoRouter.of(context).go('/duplicates'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      minimumSize: const Size(0, 0),
                     ),
+                    child: const Text('Clean Up',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: DesignTokens.success,
+                        )),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -432,7 +429,6 @@ class _MiniStat extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
-
   const _MiniStat({required this.label, required this.value, required this.color});
 
   @override
@@ -440,109 +436,113 @@ class _MiniStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontWeight: FontWeight.w800,
-            fontSize: 18,
-            color: color,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 10,
-            color: Color(0xFF64748B),
-          ),
-        ),
+        Text(value,
+            style: TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                color: color)),
+        Text(label,
+            style: const TextStyle(
+                fontFamily: 'Inter', fontSize: 10, color: Color(0xFF64748B))),
       ],
     );
   }
 }
 
-// ─── AI Suggestions Banner ────────────────────────────────────────────────────
+// ─── AI Banner ────────────────────────────────────────────────────────────────
 
-class _AiSuggestionsBanner extends StatelessWidget {
+class _AiBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return PremiumCard(
-      backgroundColor: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [DesignTokens.brand, DesignTokens.accent],
+    return BlocBuilder<AiBloc, AiState>(
+      builder: (context, state) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return PremiumCard(
+          backgroundColor: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: state.modelLoaded
+                      ? const LinearGradient(
+                          colors: [DesignTokens.brand, DesignTokens.success])
+                      : const LinearGradient(
+                          colors: [DesignTokens.brand, DesignTokens.accent]),
+                  borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+                ),
+                child: Icon(
+                  state.modelLoaded
+                      ? Icons.check_circle_rounded
+                      : Icons.auto_awesome_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
               ),
-              borderRadius:
-                  BorderRadius.circular(DesignTokens.radiusMd),
-            ),
-            child: const Icon(Icons.auto_awesome_rounded,
-                color: Colors.white, size: 18),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AI Ready',
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(fontWeight: FontWeight.w700),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      state.modelLoaded ? 'AI Model Active' : 'AI Ready to Setup',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      state.modelLoaded
+                          ? 'All AI features enabled — fully local & private'
+                          : 'Download a model to unlock AI features',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
-                Text(
-                  'Download a model to enable AI features',
-                  style: Theme.of(context).textTheme.bodySmall,
+              ),
+              if (!state.modelLoaded)
+                FilledButton.tonal(
+                  onPressed: () => context.go('/models'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: const Text('Download',
+                      style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12)),
                 ),
-              ],
-            ),
+            ],
           ),
-          FilledButton.tonal(
-            onPressed: () => context.go('/models'),
-            style: FilledButton.styleFrom(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            child: const Text('Download',
-                style: TextStyle(
-                    fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 12)),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
 
-// ─── Quick Actions Row ────────────────────────────────────────────────────────
+// ─── Quick Actions ────────────────────────────────────────────────────────────
 
-class _QuickActionsRow extends StatelessWidget {
-  static final _actions = [
+class _QuickActions extends StatelessWidget {
+  static const _actions = [
     _QA(Icons.add_photo_alternate_rounded, 'Import', DesignTokens.brand, null),
     _QA(Icons.chat_bubble_rounded, 'Ask AI', DesignTokens.accent, '/chat'),
-    _QA(Icons.content_copy_rounded, 'Duplicates', DesignTokens.warning, '/duplicates'),
+    _QA(Icons.hub_rounded, 'Galaxy', Color(0xFF8B5CF6), '/galaxy'),
+    _QA(Icons.auto_delete_rounded, 'Cleanup', DesignTokens.warning, '/duplicates'),
     _QA(Icons.school_rounded, 'Study', DesignTokens.success, '/learning'),
-    _QA(Icons.lock_rounded, 'Vault', const Color(0xFF64748B), '/vault'),
-    _QA(Icons.analytics_rounded, 'Storage', DesignTokens.tertiary, '/settings'),
+    _QA(Icons.lock_rounded, 'Vault', Color(0xFF64748B), '/vault'),
   ];
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      physics: const BouncingScrollPhysics(),
-      child: Row(
-        children: _actions
-            .map((a) => _QuickActionChip(action: a))
-            .toList(),
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _actions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) => _ActionChip(action: _actions[i]),
       ),
     );
   }
@@ -556,39 +556,45 @@ class _QA {
   const _QA(this.icon, this.label, this.color, this.path);
 }
 
-class _QuickActionChip extends StatelessWidget {
+class _ActionChip extends StatelessWidget {
   final _QA action;
-  const _QuickActionChip({required this.action});
+  const _ActionChip({required this.action});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(right: 10),
-      child: InkWell(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          if (action.path != null) context.go(action.path!);
-        },
-        borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
-        child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
-            borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
-            border: Border.all(
-                color: isDark
-                    ? DesignTokens.darkBorder
-                    : DesignTokens.lightBorder),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(action.icon, color: action.color, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                action.label,
+    return InkWell(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        if (action.path != null) {
+          context.go(action.path!);
+        } else {
+          // Import
+          showModalBottomSheet(
+            context: context,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(DesignTokens.radiusXl)),
+            ),
+            builder: (_) => _ImportSheet(),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isDark ? DesignTokens.darkCard : DesignTokens.lightSurface,
+          borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+          border: Border.all(
+              color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(action.icon, color: action.color, size: 16),
+            const SizedBox(width: 6),
+            Text(action.label,
                 style: TextStyle(
                   fontFamily: 'Inter',
                   fontWeight: FontWeight.w600,
@@ -596,97 +602,7 @@ class _QuickActionChip extends StatelessWidget {
                   color: isDark
                       ? const Color(0xFFCBD5E1)
                       : const Color(0xFF1E293B),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Smart Collections Row ────────────────────────────────────────────────────
-
-class _SmartCollectionsRow extends StatelessWidget {
-  static const _collections = [
-    _Col('Cloud & DevOps', Icons.cloud_rounded, Color(0xFF6366F1), '89 files'),
-    _Col('Finance', Icons.account_balance_rounded, Color(0xFF10B981), '40 files'),
-    _Col('Learning', Icons.school_rounded, Color(0xFFEC4899), '128 files'),
-    _Col('Meetings', Icons.meeting_room_rounded, Color(0xFF3B82F6), '64 files'),
-    _Col('Chess', Icons.sports_esports_rounded, Color(0xFF64748B), '32 files'),
-    _Col('Screenshots', Icons.screenshot_monitor_rounded, Color(0xFF8B5CF6), '210 files'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 116,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        physics: const BouncingScrollPhysics(),
-        itemCount: _collections.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
-        itemBuilder: (context, i) => _CollectionChip(col: _collections[i]),
-      ),
-    );
-  }
-}
-
-class _Col {
-  final String name;
-  final IconData icon;
-  final Color color;
-  final String count;
-  const _Col(this.name, this.icon, this.color, this.count);
-}
-
-class _CollectionChip extends StatelessWidget {
-  final _Col col;
-  const _CollectionChip({required this.col});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return GestureDetector(
-      onTap: () => context.go('/collections'),
-      child: Container(
-        width: 130,
-        padding: const EdgeInsets.all(DesignTokens.space12),
-        decoration: BoxDecoration(
-          color: isDark ? DesignTokens.darkCard : DesignTokens.lightCard,
-          borderRadius: BorderRadius.circular(DesignTokens.radiusLg),
-          border: Border.all(
-              color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: col.color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
-              ),
-              child: Icon(col.icon, color: col.color, size: 18),
-            ),
-            const Spacer(),
-            Text(
-              col.name,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              col.count,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
+                )),
           ],
         ),
       ),
@@ -694,35 +610,30 @@ class _CollectionChip extends StatelessWidget {
   }
 }
 
-// ─── Rich File Card ────────────────────────────────────────────────────────────
+// ─── File Card ────────────────────────────────────────────────────────────────
 
-class _RichFileCard extends StatelessWidget {
-  final _DemoEntry entry;
+class _FileCard extends StatelessWidget {
+  final FileEntry entry;
   final int index;
 
-  const _RichFileCard({required this.entry, required this.index});
+  const _FileCard({required this.entry, required this.index});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Padding(
       padding: const EdgeInsets.only(bottom: DesignTokens.space8),
       child: PremiumCard(
-        onTap: () {},
+        onTap: () => context.go('/file/${entry.id}'),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Thumbnail / icon box
-            FileTypeDisplay.iconBox(entry.ext, boxSize: 48),
+            FileTypeDisplay.iconBox(entry.extension, boxSize: 48),
             const SizedBox(width: DesignTokens.space12),
-
-            // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Filename
                   Text(
                     entry.filename,
                     style: Theme.of(context)
@@ -732,60 +643,43 @@ class _RichFileCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
-
-                  // AI Summary
-                  Text(
-                    entry.summary,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: isDark
-                              ? const Color(0xFF64748B)
-                              : const Color(0xFF94A3B8),
-                        ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (entry.summary != null && entry.summary!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      entry.summary!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: isDark
+                                ? const Color(0xFF64748B)
+                                : const Color(0xFF94A3B8),
+                          ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                   const SizedBox(height: 6),
-
-                  // Tags + size
                   Row(
                     children: [
                       ...entry.tags
                           .take(2)
                           .map((t) => Padding(
                                 padding: const EdgeInsets.only(right: 6),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 7, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: DesignTokens.brand.withOpacity(0.08),
-                                    borderRadius: BorderRadius.circular(
-                                        DesignTokens.radiusFull),
-                                  ),
-                                  child: Text(
-                                    t,
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                      color: DesignTokens.brand,
-                                    ),
-                                  ),
-                                ),
+                                child: _TagChip(t),
                               )),
                       const Spacer(),
-                      Text(
-                        entry.formattedSize,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+                      Text(entry.formattedSize,
+                          style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(width: 6),
+                      Text('·',
+                          style: Theme.of(context).textTheme.bodySmall),
+                      const SizedBox(width: 6),
+                      Text(entry.timeAgo,
+                          style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
                 ],
               ),
             ),
-
-            // Actions
-            _FileCardContextMenu(filename: entry.filename),
+            _FileContextMenu(entry: entry),
           ],
         ),
       ),
@@ -793,117 +687,176 @@ class _RichFileCard extends StatelessWidget {
   }
 }
 
-class _FileCardContextMenu extends StatelessWidget {
-  final String filename;
-  const _FileCardContextMenu({required this.filename});
+class _TagChip extends StatelessWidget {
+  final String tag;
+  const _TagChip(this.tag);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: DesignTokens.brand.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(DesignTokens.radiusFull),
+      ),
+      child: Text(tag,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: DesignTokens.brand,
+          )),
+    );
+  }
+}
+
+class _FileContextMenu extends StatelessWidget {
+  final FileEntry entry;
+  const _FileContextMenu({required this.entry});
 
   @override
   Widget build(BuildContext context) {
     return PopupMenuButton<String>(
-      icon: Icon(
-        Icons.more_vert_rounded,
-        size: 18,
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF475569)
-            : const Color(0xFF94A3B8),
-      ),
+      icon: Icon(Icons.more_vert_rounded,
+          size: 18,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF475569)
+              : const Color(0xFF94A3B8)),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
-      ),
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'open', child: ListTile(dense: true, leading: Icon(Icons.open_in_new_rounded, size: 16), title: Text('Open'))),
-        const PopupMenuItem(value: 'summary', child: ListTile(dense: true, leading: Icon(Icons.auto_awesome_rounded, size: 16), title: Text('AI Summary'))),
-        const PopupMenuItem(value: 'rename', child: ListTile(dense: true, leading: Icon(Icons.edit_rounded, size: 16), title: Text('Rename'))),
-        const PopupMenuItem(value: 'move', child: ListTile(dense: true, leading: Icon(Icons.drive_file_move_rounded, size: 16), title: Text('Move to collection'))),
+          borderRadius: BorderRadius.circular(DesignTokens.radiusMd)),
+      onSelected: (action) async {
+        switch (action) {
+          case 'open':
+            context.go('/file/${entry.id}');
+          case 'favorite':
+            context.read<HomeBloc>();
+          case 'ask_ai':
+            context.go('/chat');
+          case 'delete':
+            _confirmDelete(context);
+        }
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(
+            value: 'open',
+            child: ListTile(
+                dense: true,
+                leading: Icon(Icons.open_in_new_rounded, size: 16),
+                title: Text('Open'))),
+        const PopupMenuItem(
+            value: 'favorite',
+            child: ListTile(
+                dense: true,
+                leading: Icon(Icons.favorite_border_rounded, size: 16),
+                title: Text('Add to favorites'))),
+        const PopupMenuItem(
+            value: 'ask_ai',
+            child: ListTile(
+                dense: true,
+                leading: Icon(Icons.auto_awesome_rounded, size: 16),
+                title: Text('Ask AI about this'))),
         const PopupMenuDivider(),
-        const PopupMenuItem(value: 'delete', child: ListTile(dense: true, leading: Icon(Icons.delete_rounded, size: 16, color: Colors.red), title: Text('Delete', style: TextStyle(color: Colors.red)))),
+        const PopupMenuItem(
+            value: 'delete',
+            child: ListTile(
+                dense: true,
+                leading:
+                    Icon(Icons.delete_rounded, size: 16, color: Colors.red),
+                title:
+                    Text('Remove', style: TextStyle(color: Colors.red)))),
       ],
     );
   }
-}
 
-// ─── Contextual FAB ───────────────────────────────────────────────────────────
-
-class _ContextualFab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return FloatingActionButton.extended(
-      onPressed: () {
-        HapticFeedback.mediumImpact();
-        showModalBottomSheet(
-          context: context,
-          shape: const RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(
-                top: Radius.circular(DesignTokens.radiusXl)),
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove from index?'),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DesignTokens.radiusXl)),
+        content: Text('Remove "${entry.filename}" from MemoryOS?\nThe original file will NOT be deleted.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              context.read<HomeBloc>();
+            },
+            style: FilledButton.styleFrom(backgroundColor: DesignTokens.error),
+            child: const Text('Remove'),
           ),
-          builder: (ctx) => _ImportBottomSheet(),
-        );
-      },
-      backgroundColor: DesignTokens.brand,
-      foregroundColor: Colors.white,
-      icon: const Icon(Icons.add_rounded),
-      label: const Text('Import',
-          style: TextStyle(
-              fontFamily: 'Inter', fontWeight: FontWeight.w700, fontSize: 14)),
-      elevation: 4,
+        ],
+      ),
     );
   }
 }
 
-class _ImportBottomSheet extends StatelessWidget {
+// ─── Import Sheet ─────────────────────────────────────────────────────────────
+
+class _ImportSheet extends StatelessWidget {
+  static const _options = [
+    (Icons.photo_library_rounded, 'Photo Library', 'Import photos and videos'),
+    (Icons.folder_open_rounded, 'Files & Folders', 'Import any file type'),
+    (Icons.screenshot_monitor_rounded, 'Screenshots Folder', 'Import screenshot directory'),
+    (Icons.mic_rounded, 'Voice Note', 'Record a new voice memo'),
+    (Icons.link_rounded, 'URL / Web Page', 'Save a web page to your library'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final items = [
-      (Icons.photo_library_rounded, 'Photo Library', 'Import photos and videos'),
-      (Icons.folder_open_rounded, 'Files & Folders', 'Import any file type'),
-      (Icons.screenshot_monitor_rounded, 'Screenshots', 'Import screenshots folder'),
-      (Icons.mic_rounded, 'Voice Note', 'Record a voice memo'),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          Text('Import Files',
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 16),
-          ...items.map(
-            (item) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Container(
-                width: 40,
-                height: 40,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
-                  color: DesignTokens.brand.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                child: Icon(item.$1, color: DesignTokens.brand, size: 20),
               ),
-              title: Text(item.$2,
-                  style: const TextStyle(
-                      fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 14)),
-              subtitle: Text(item.$3,
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
-              onTap: () => Navigator.pop(context),
             ),
-          ),
-        ],
+            Text('Import',
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineSmall
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 16),
+            ..._options.map(
+              (opt) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: DesignTokens.brand.withOpacity(0.1),
+                    borderRadius:
+                        BorderRadius.circular(DesignTokens.radiusMd),
+                  ),
+                  child: Icon(opt.$1, color: DesignTokens.brand, size: 20),
+                ),
+                title: Text(opt.$2,
+                    style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14)),
+                subtitle: Text(opt.$3,
+                    style: const TextStyle(
+                        fontFamily: 'Inter', fontSize: 12)),
+                onTap: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

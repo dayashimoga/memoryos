@@ -6,13 +6,10 @@ pub mod tesseract;
 pub mod types;
 
 pub use error::OcrError;
-pub use types::{OcrResult, OcrBackend};
+pub use types::{OcrBackend, OcrResult};
 
 /// Extract text from an image file using the specified backend.
-pub async fn extract_text(
-    image_path: &str,
-    backend: OcrBackend,
-) -> Result<OcrResult, OcrError> {
+pub async fn extract_text(image_path: &str, backend: OcrBackend) -> Result<OcrResult, OcrError> {
     match backend {
         OcrBackend::Tesseract => tesseract::extract(image_path).await,
         OcrBackend::Paddle => paddle::extract(image_path).await,

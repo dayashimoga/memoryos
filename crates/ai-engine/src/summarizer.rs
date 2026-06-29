@@ -5,11 +5,7 @@ use crate::types::{GenerateRequest, GenerateResponse};
 use tracing::debug;
 
 /// Summarize a block of text using the local AI model.
-pub async fn summarize(
-    text: &str,
-    model_id: &str,
-    max_words: usize,
-) -> Result<String, AiError> {
+pub async fn summarize(text: &str, model_id: &str, max_words: usize) -> Result<String, AiError> {
     if text.trim().is_empty() {
         return Ok(String::new());
     }
@@ -117,10 +113,7 @@ async fn run_inference(request: GenerateRequest) -> Result<GenerateResponse, AiE
         .await
         .map_err(|e| AiError::Inference(e.to_string()))?;
 
-    let text = json["content"]
-        .as_str()
-        .unwrap_or("")
-        .to_string();
+    let text = json["content"].as_str().unwrap_or("").to_string();
 
     Ok(GenerateResponse {
         text,

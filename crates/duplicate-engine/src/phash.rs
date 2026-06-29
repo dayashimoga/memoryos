@@ -23,11 +23,7 @@ pub fn compute_phash(image_path: &str) -> Result<u64, DuplicateError> {
 
     // Step 4: Build 64-bit hash (top-left 8x8 pixels vs mean)
     let mut hash: u64 = 0;
-    for (i, row) in gray
-        .rows()
-        .take(PHASH_SMALL as usize)
-        .enumerate()
-    {
+    for (i, row) in gray.rows().take(PHASH_SMALL as usize).enumerate() {
         for (j, pixel) in row.take(PHASH_SMALL as usize).enumerate() {
             let bit_pos = i * PHASH_SMALL as usize + j;
             if pixel[0] as f32 > mean {

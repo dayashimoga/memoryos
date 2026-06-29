@@ -107,7 +107,11 @@ fn parse_paddle_output(output: &str, elapsed_ms: u64) -> Result<OcrResult, OcrEr
         }
     }
 
-    let avg_confidence = if count > 0 { total_conf / count as f32 } else { 0.0 };
+    let avg_confidence = if count > 0 {
+        total_conf / count as f32
+    } else {
+        0.0
+    };
 
     Ok(OcrResult {
         text: all_text.join(" "),

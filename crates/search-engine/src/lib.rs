@@ -47,7 +47,11 @@ impl SearchEngine {
         }
 
         let mut items: Vec<SearchResultItem> = merged.into_values().collect();
-        items.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        items.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         items.truncate(query.limit);
 
         Ok(SearchResult {

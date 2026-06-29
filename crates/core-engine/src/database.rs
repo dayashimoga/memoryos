@@ -98,9 +98,9 @@ impl MetadataDb {
     }
 
     pub fn list_files(&self, limit: usize, offset: usize) -> Result<Vec<FileEntry>, CoreError> {
-        let mut stmt = self.conn.prepare(
-            "SELECT * FROM files ORDER BY created_at DESC LIMIT ?1 OFFSET ?2",
-        )?;
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM files ORDER BY created_at DESC LIMIT ?1 OFFSET ?2")?;
         let entries = stmt
             .query_map(params![limit as i64, offset as i64], |row| {
                 Self::row_to_file_entry(row)
@@ -139,10 +139,59 @@ impl MetadataDb {
     }
 
     pub fn count_files(&self) -> Result<usize, CoreError> {
-        let count: i64 =
-            self.conn
-                .query_row("SELECT COUNT(*) FROM files", [], |row| row.get(0))?;
+        let count: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM files", [], |row| row.get(0))?;
         Ok(count as usize)
+    }
+
+    /// Delete a file entry by its UUID.
+    pub fn delete_file(&self, id: &Uuid) -> Result<usize, CoreError> {
+        let affected = self
+            .conn
+            .execute("DELETE FROM files WHERE id = ?1", params![id.to_string()])?;
+        Ok(affected)
+    }
+
+    /// Set or clear the encrypted flag for a file.
+    pub fn set_encrypted(&self, id: &Uuid, encrypted: bool) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE files SET is_encrypted = ?1 WHERE id = ?2",
+            params![encrypted, id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// List all files marked as encrypted (vault members).
+    pub fn list_encrypted_files(&self) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM files WHERE is_encrypted = 1 ORDER BY modified_at DESC")?;
+        let entries = stmt
+            .query_map([], |row| Self::row_to_file_entry(row))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    /// Count files by indexing status.
+    pub fn count_by_status(&self, status: &IndexingStatus) -> Result<usize, CoreError> {
+        let status_str = serde_json::to_string(status)?;
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM files WHERE indexing_status = ?1",
+            params![status_str],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
+
+    /// Get total size of all indexed files.
+    pub fn total_size_bytes(&self) -> Result<u64, CoreError> {
+        let total: i64 = self.conn.query_row(
+            "SELECT COALESCE(SUM(size_bytes), 0) FROM files",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(total as u64)
     }
 
     fn row_to_file_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileEntry> {
@@ -168,8 +217,7 @@ impl MetadataDb {
             tags: Vec::new(), // loaded separately via join
             collection_ids: Vec::new(),
             is_encrypted: row.get("is_encrypted")?,
-            indexing_status: serde_json::from_str(&status_str)
-                .unwrap_or(IndexingStatus::Pending),
+            indexing_status: serde_json::from_str(&status_str).unwrap_or(IndexingStatus::Pending),
             created_at: DateTime::parse_from_rfc3339(&created_str)
                 .map(|d| d.with_timezone(&Utc))
                 .unwrap_or_else(|_| Utc::now()),
@@ -183,7 +231,7 @@ impl MetadataDb {
             }),
         })
     }
-}
+} // end impl MetadataDb
 
 #[cfg(test)]
 mod tests {
@@ -221,8 +269,10 @@ mod tests {
     fn test_count_files() {
         let db = test_db();
         assert_eq!(db.count_files().unwrap(), 0);
-        db.insert_file(&FileEntry::new("/a.txt", FileType::Text, 10)).unwrap();
-        db.insert_file(&FileEntry::new("/b.txt", FileType::Text, 20)).unwrap();
+        db.insert_file(&FileEntry::new("/a.txt", FileType::Text, 10))
+            .unwrap();
+        db.insert_file(&FileEntry::new("/b.txt", FileType::Text, 20))
+            .unwrap();
         assert_eq!(db.count_files().unwrap(), 2);
     }
 
@@ -242,7 +292,8 @@ mod tests {
         let db = test_db();
         let entry = FileEntry::new("/video.mp4", FileType::Video, 10_000_000);
         db.insert_file(&entry).unwrap();
-        db.update_indexing_status(&entry.id, &IndexingStatus::Completed).unwrap();
+        db.update_indexing_status(&entry.id, &IndexingStatus::Completed)
+            .unwrap();
 
         let updated = db.get_file_by_id(&entry.id).unwrap().unwrap();
         assert_eq!(updated.indexing_status, IndexingStatus::Completed);

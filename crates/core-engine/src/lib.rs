@@ -32,4 +32,4 @@ pub fn initialize(data_dir: &str) -> anyhow::Result<()> {
 }
 
 pub use error::CoreError;
-pub use models::{FileEntry, Tag, Collection, UserSettings};
+pub use models::{Collection, FileEntry, Tag, UserSettings};

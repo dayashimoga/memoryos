@@ -1,88 +1,71 @@
+/// Expanded entity model for v1.2.
+
 import 'package:equatable/equatable.dart';
 
-/// Mirrors Rust [FileType] enum.
+// ─── File Type ─────────────────────────────────────────────────────────────────
+
 enum FileType {
   image,
-  screenshot,
-  document,
-  spreadsheet,
   video,
   audio,
+  document,
+  spreadsheet,
+  presentation,
+  pdf,
   archive,
-  email,
-  chat,
+  code,
   markdown,
-  html,
   text,
+  font,
+  database,
   unknown;
 
   static FileType fromExtension(String ext) {
-    switch (ext.toLowerCase()) {
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'bmp':
-      case 'webp':
-      case 'heic':
-      case 'tiff':
-        return FileType.image;
-      case 'pdf':
-      case 'docx':
-      case 'doc':
-      case 'odt':
-      case 'rtf':
-        return FileType.document;
-      case 'xlsx':
-      case 'xls':
-      case 'csv':
-      case 'ods':
-        return FileType.spreadsheet;
-      case 'mp4':
-      case 'mkv':
-      case 'avi':
-      case 'mov':
-      case 'webm':
-        return FileType.video;
-      case 'mp3':
-      case 'wav':
-      case 'flac':
-      case 'aac':
-      case 'ogg':
-      case 'm4a':
-        return FileType.audio;
-      case 'zip':
-      case 'tar':
-      case 'gz':
-      case '7z':
-      case 'rar':
-        return FileType.archive;
-      case 'eml':
-      case 'mbox':
-        return FileType.email;
-      case 'md':
-      case 'markdown':
-        return FileType.markdown;
-      case 'html':
-      case 'htm':
-        return FileType.html;
-      case 'txt':
-      case 'log':
-        return FileType.text;
-      default:
-        return FileType.unknown;
-    }
+    final e = ext.toLowerCase().replaceFirst('.', '');
+    return switch (e) {
+      'jpg' || 'jpeg' || 'png' || 'gif' || 'webp' || 'bmp' || 'tiff' || 'tif' || 'heic' || 'heif' || 'avif' || 'svg' => FileType.image,
+      'mp4' || 'mov' || 'avi' || 'mkv' || 'webm' || 'flv' || 'm4v' || 'wmv' || '3gp' => FileType.video,
+      'mp3' || 'flac' || 'wav' || 'ogg' || 'aac' || 'm4a' || 'opus' || 'wma' => FileType.audio,
+      'doc' || 'docx' || 'odt' || 'rtf' || 'pages' => FileType.document,
+      'xls' || 'xlsx' || 'ods' || 'numbers' || 'csv' => FileType.spreadsheet,
+      'ppt' || 'pptx' || 'odp' || 'key' => FileType.presentation,
+      'pdf' => FileType.pdf,
+      'zip' || 'tar' || 'gz' || 'bz2' || 'rar' || '7z' || 'xz' || 'zst' => FileType.archive,
+      'py' || 'js' || 'ts' || 'dart' || 'rs' || 'go' || 'java' || 'kt' || 'swift' || 'c' || 'cpp' || 'h' || 'cs' || 'rb' || 'php' || 'sh' || 'bash' || 'json' || 'yaml' || 'yml' || 'toml' || 'xml' || 'html' || 'css' || 'sql' || 'tf' => FileType.code,
+      'md' || 'mdx' || 'rst' => FileType.markdown,
+      'txt' || 'log' || 'conf' || 'ini' || 'env' => FileType.text,
+      'ttf' || 'otf' || 'woff' || 'woff2' => FileType.font,
+      'db' || 'sqlite' || 'sqlite3' => FileType.database,
+      _ => FileType.unknown,
+    };
   }
 
-  bool get isMedia => this == FileType.image || this == FileType.video || this == FileType.screenshot;
-  bool get isDocument => this == FileType.document || this == FileType.spreadsheet || this == FileType.markdown || this == FileType.html;
-  bool get isAudio => this == FileType.audio;
+  bool get isMedia => this == FileType.image || this == FileType.video || this == FileType.audio;
+  bool get isDocument => this == FileType.document || this == FileType.pdf ||
+      this == FileType.spreadsheet || this == FileType.presentation ||
+      this == FileType.markdown || this == FileType.text;
+  bool get isCode => this == FileType.code;
 }
 
-/// Mirrors Rust [IndexingStatus] enum.
-enum IndexingStatus { pending, inProgress, completed, failed, skipped }
+// ─── IndexingStatus ────────────────────────────────────────────────────────────
 
-/// Core domain entity representing a tracked file.
+enum IndexingStatus { pending, indexing, completed, failed }
+
+// ─── Tag ──────────────────────────────────────────────────────────────────────
+
+class Tag extends Equatable {
+  final String id;
+  final String name;
+  final String? color;
+
+  const Tag({required this.id, required this.name, this.color});
+
+  @override
+  List<Object?> get props => [id];
+}
+
+// ─── FileEntry ─────────────────────────────────────────────────────────────────
+
 class FileEntry extends Equatable {
   final String id;
   final String path;
@@ -90,19 +73,14 @@ class FileEntry extends Equatable {
   final String extension;
   final FileType fileType;
   final int sizeBytes;
-  final String? sha256Hash;
-  final String? phash;
-  final String? ocrText;
-  final String? summary;
-  final List<String> tags;
-  final List<String> collectionIds;
-  final bool isEncrypted;
-  final IndexingStatus indexingStatus;
   final DateTime createdAt;
   final DateTime modifiedAt;
-  final DateTime? indexedAt;
+  final List<String> tags;
+  final String? summary;
+  final IndexingStatus indexingStatus;
   final bool isFavorite;
-  final String? thumbnailPath;
+  final String? ocrText;
+  final String? phash;
 
   const FileEntry({
     required this.id,
@@ -111,36 +89,30 @@ class FileEntry extends Equatable {
     required this.extension,
     required this.fileType,
     required this.sizeBytes,
-    this.sha256Hash,
-    this.phash,
-    this.ocrText,
-    this.summary,
-    this.tags = const [],
-    this.collectionIds = const [],
-    this.isEncrypted = false,
-    this.indexingStatus = IndexingStatus.pending,
     required this.createdAt,
     required this.modifiedAt,
-    this.indexedAt,
+    this.tags = const [],
+    this.summary,
+    this.indexingStatus = IndexingStatus.completed,
     this.isFavorite = false,
-    this.thumbnailPath,
+    this.ocrText,
+    this.phash,
   });
 
   String get formattedSize {
-    if (sizeBytes < 1024) return '$sizeBytes B';
-    if (sizeBytes < 1024 * 1024) return '${(sizeBytes / 1024).toStringAsFixed(1)} KB';
-    if (sizeBytes < 1024 * 1024 * 1024) {
-      return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(sizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+    final b = sizeBytes;
+    if (b < 1024) return '$b B';
+    if (b < 1024 * 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
+    if (b < 1024 * 1024 * 1024) return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   String get timeAgo {
     final now = DateTime.now();
     final diff = now.difference(modifiedAt);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
     if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
     if (diff.inDays < 365) return '${(diff.inDays / 30).floor()}mo ago';
@@ -148,61 +120,52 @@ class FileEntry extends Equatable {
   }
 
   FileEntry copyWith({
-    String? summary,
+    String? id,
+    String? path,
+    String? filename,
+    String? extension,
+    FileType? fileType,
+    int? sizeBytes,
+    DateTime? createdAt,
+    DateTime? modifiedAt,
     List<String>? tags,
+    String? summary,
     IndexingStatus? indexingStatus,
     bool? isFavorite,
-    String? thumbnailPath,
     String? ocrText,
+    String? phash,
   }) =>
       FileEntry(
-        id: id,
-        path: path,
-        filename: filename,
-        extension: extension,
-        fileType: fileType,
-        sizeBytes: sizeBytes,
-        sha256Hash: sha256Hash,
-        phash: phash,
-        ocrText: ocrText ?? this.ocrText,
-        summary: summary ?? this.summary,
+        id: id ?? this.id,
+        path: path ?? this.path,
+        filename: filename ?? this.filename,
+        extension: extension ?? this.extension,
+        fileType: fileType ?? this.fileType,
+        sizeBytes: sizeBytes ?? this.sizeBytes,
+        createdAt: createdAt ?? this.createdAt,
+        modifiedAt: modifiedAt ?? this.modifiedAt,
         tags: tags ?? this.tags,
-        collectionIds: collectionIds,
-        isEncrypted: isEncrypted,
+        summary: summary ?? this.summary,
         indexingStatus: indexingStatus ?? this.indexingStatus,
-        createdAt: createdAt,
-        modifiedAt: modifiedAt,
-        indexedAt: indexedAt,
         isFavorite: isFavorite ?? this.isFavorite,
-        thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+        ocrText: ocrText ?? this.ocrText,
+        phash: phash ?? this.phash,
       );
 
   @override
-  List<Object?> get props => [id, path, indexingStatus, tags, isFavorite];
+  List<Object?> get props => [id];
 }
 
-/// Domain entity for a user or AI-generated tag.
-class Tag extends Equatable {
-  final String id;
-  final String name;
-  final String? color;
-  final DateTime createdAt;
+// ─── Collection ────────────────────────────────────────────────────────────────
 
-  const Tag({required this.id, required this.name, this.color, required this.createdAt});
-
-  @override
-  List<Object?> get props => [id, name];
-}
-
-/// Domain entity for a collection of files.
 class Collection extends Equatable {
   final String id;
   final String name;
   final String? description;
-  final String? icon;
+  final String? iconName;
+  final String? colorHex;
   final int fileCount;
-  final String? coverImagePath;
-  final List<String> tags;
+  final bool isSmart;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -210,55 +173,68 @@ class Collection extends Equatable {
     required this.id,
     required this.name,
     this.description,
-    this.icon,
+    this.iconName,
+    this.colorHex,
     this.fileCount = 0,
-    this.coverImagePath,
-    this.tags = const [],
+    this.isSmart = false,
     required this.createdAt,
     required this.updatedAt,
   });
 
+  Collection copyWith({
+    String? id,
+    String? name,
+    String? description,
+    int? fileCount,
+    bool? isSmart,
+  }) =>
+      Collection(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        description: description ?? this.description,
+        iconName: iconName,
+        colorHex: colorHex,
+        fileCount: fileCount ?? this.fileCount,
+        isSmart: isSmart ?? this.isSmart,
+        createdAt: createdAt,
+        updatedAt: DateTime.now(),
+      );
+
   @override
-  List<Object?> get props => [id, name, fileCount];
+  List<Object?> get props => [id];
 }
 
-/// Storage statistics summary.
+// ─── StorageStats ──────────────────────────────────────────────────────────────
+
 class StorageStats extends Equatable {
   final int totalFiles;
   final int totalSizeBytes;
+  final int usedSizeBytes;
   final int duplicateSizeBytes;
   final int blurryImageCount;
-  final int emptyScreenshotCount;
-  final int tagCount;
-  final int collectionCount;
 
   const StorageStats({
     this.totalFiles = 0,
     this.totalSizeBytes = 0,
+    this.usedSizeBytes = 0,
     this.duplicateSizeBytes = 0,
     this.blurryImageCount = 0,
-    this.emptyScreenshotCount = 0,
-    this.tagCount = 0,
-    this.collectionCount = 0,
   });
 
-  int get recoverableBytes => duplicateSizeBytes + (blurryImageCount * 500000);
+  int get recoverableBytes =>
+      duplicateSizeBytes + blurryImageCount * 512 * 1024;
 
-  String get formattedTotal {
-    if (totalSizeBytes < 1024 * 1024) return '${(totalSizeBytes / 1024).toStringAsFixed(1)} KB';
-    if (totalSizeBytes < 1024 * 1024 * 1024) {
-      return '${(totalSizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(totalSizeBytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
-  }
+  String get formattedTotal => _fmt(totalSizeBytes);
+  String get formattedUsed => _fmt(usedSizeBytes);
+  String get formattedRecoverable => _fmt(recoverableBytes);
 
-  String get formattedRecoverable {
-    final bytes = recoverableBytes;
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
-    if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+  String _fmt(int b) {
+    if (b < 1024) return '$b B';
+    if (b < 1024 * 1024) return '${(b / 1024).toStringAsFixed(1)} KB';
+    if (b < 1024 * 1024 * 1024) return '${(b / (1024 * 1024)).toStringAsFixed(1)} MB';
+    return '${(b / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
   }
 
   @override
-  List<Object?> get props => [totalFiles, totalSizeBytes, tagCount, collectionCount];
+  List<Object?> get props => [totalFiles, totalSizeBytes, duplicateSizeBytes];
 }

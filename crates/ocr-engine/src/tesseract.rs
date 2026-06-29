@@ -55,7 +55,10 @@ pub async fn extract(image_path: &str) -> Result<OcrResult, OcrError> {
     let confidence = if text.trim().is_empty() {
         0.0
     } else {
-        let printable_ratio = text.chars().filter(|c| c.is_alphanumeric() || c.is_whitespace()).count() as f32
+        let printable_ratio = text
+            .chars()
+            .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+            .count() as f32
             / text.len().max(1) as f32;
         (printable_ratio * 0.95).min(1.0)
     };

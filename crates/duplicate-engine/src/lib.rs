@@ -5,10 +5,9 @@ pub mod phash;
 pub mod types;
 
 pub use error::DuplicateError;
-pub use types::{DuplicateGroup, DuplicateType, DuplicateReport};
+pub use types::{DuplicateGroup, DuplicateReport, DuplicateType};
 
 use crate::phash::compute_phash;
-use crate::types::DuplicateType;
 use sha2::{Digest, Sha256};
 use std::path::Path;
 use tracing::{debug, info};
@@ -36,7 +35,10 @@ pub fn compare_files(path_a: &str, path_b: &str) -> Result<DuplicateType, Duplic
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-    if matches!(ext.as_str(), "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp") {
+    if matches!(
+        ext.as_str(),
+        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp"
+    ) {
         let ph_a = compute_phash(path_a)?;
         let ph_b = compute_phash(path_b)?;
         let distance = hamming_distance(ph_a, ph_b);
