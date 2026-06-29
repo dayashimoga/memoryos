@@ -272,9 +272,8 @@ class _ThemeSetting extends StatelessWidget {
                   ),
                 ],
                 style: ButtonStyle(
-                  textStyle: WidgetStatePropertyAll(
-                    Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontFamily: 'Inter', fontWeight: FontWeight.w600),
+                  textStyle: const MaterialStatePropertyAll(
+                    TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
                   ),
                 ),
               ),
