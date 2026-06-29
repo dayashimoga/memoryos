@@ -80,7 +80,7 @@ dependencies:
   json_annotation: ^4.8.1
 
   # Intl
-  intl: ^0.20.2
+  intl: ">=0.18.0 <0.21.0"
 
   # Logging
   logger: ^2.1.0
