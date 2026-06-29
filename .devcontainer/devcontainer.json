@@ -1,0 +1,41 @@
+{
+  "name": "MemoryOS Dev Container",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "builder",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "stable",
+      "profile": "default"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "Dart-Code.dart-code",
+        "Dart-Code.flutter",
+        "ms-azuretools.vscode-docker",
+        "davidanson.vscode-markdownlint",
+        "bierner.mermaid-markdown-syntax-highlighting",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates"
+      ],
+      "settings": {
+        "rust-analyzer.cargo.allFeatures": true,
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "editor.formatOnSave": true,
+        "dart.lineLength": 120
+      }
+    }
+  },
+  "postCreateCommand": "cargo fetch && cd apps/flutter_app && flutter pub get",
+  "remoteUser": "root",
+  "forwardPorts": [3000, 8000],
+  "portsAttributes": {
+    "3000": {"label": "Flutter Web"},
+    "8000": {"label": "MkDocs Docs"}
+  }
+}

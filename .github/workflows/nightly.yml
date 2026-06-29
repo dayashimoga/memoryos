@@ -1,0 +1,49 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # 2 AM UTC daily
+  workflow_dispatch:
+
+jobs:
+  nightly-tests:
+    name: Nightly Full Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.19.0"
+          channel: stable
+
+      - name: Full Rust test suite with verbose output
+        run: cargo test --workspace --all-features -- --nocapture
+
+      - name: Flutter tests
+        working-directory: apps/flutter_app
+        run: flutter pub get && flutter test
+
+      - name: Property-based tests
+        run: cargo test --workspace -- proptest
+
+      - name: Mutation testing (cargo-mutants)
+        run: |
+          cargo install cargo-mutants || true
+          cargo mutants --workspace --timeout 30 || true
+
+      - name: Performance benchmarks
+        run: cargo bench --workspace || true
+
+  dependency-check:
+    name: Dependency Freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check outdated dependencies
+        run: cargo install cargo-outdated && cargo outdated --workspace

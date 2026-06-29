@@ -1,0 +1,28 @@
+// Dependabot configuration
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - rust
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: pub
+    directory: "/apps/flutter_app"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - flutter
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions

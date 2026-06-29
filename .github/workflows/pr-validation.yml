@@ -1,0 +1,92 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  pr-checks:
+    name: PR Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.19.0"
+          channel: stable
+          cache: true
+
+      - name: Rust format
+        run: cargo fmt --all -- --check
+
+      - name: Rust clippy (zero warnings)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Rust unit tests
+        run: cargo test --workspace
+
+      - name: Flutter pub get
+        working-directory: apps/flutter_app
+        run: flutter pub get
+
+      - name: Flutter analyze (zero issues)
+        working-directory: apps/flutter_app
+        run: flutter analyze --fatal-infos --fatal-warnings
+
+      - name: Flutter format check
+        working-directory: apps/flutter_app
+        run: dart format --set-exit-if-changed .
+
+      - name: Flutter unit tests
+        working-directory: apps/flutter_app
+        run: flutter test
+
+      - name: Docs validation
+        run: |
+          echo "Checking mandatory documentation files..."
+          MISSING=()
+          FILES=(
+            "README.md"
+            "docs/architecture/system-architecture.md"
+            "docs/requirements/business-requirements.md"
+            "docs/testing/test-strategy.md"
+            "docs/security/threat-model.md"
+          )
+          for f in "${FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              MISSING+=("$f")
+            fi
+          done
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "Missing docs: ${MISSING[*]}"
+            exit 1
+          fi
+          echo "All required documentation present."
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Audit Rust dependencies
+        run: cargo audit
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.sha }}

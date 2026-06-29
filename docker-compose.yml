@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  # ─── Development Builder ─────────────────────────────────────────────────────
+  builder:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    environment:
+      - RUST_LOG=debug
+      - CARGO_HOME=/usr/local/cargo
+    working_dir: /workspace
+    command: sleep infinity
+    networks:
+      - memoryos
+
+  # ─── Test Runner ─────────────────────────────────────────────────────────────
+  tester:
+    build:
+      context: .
+      dockerfile: docker/tester/Dockerfile
+    image: memoryos-tester:latest
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    environment:
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+    working_dir: /workspace
+    command: bash -c "cargo test --workspace && flutter test"
+    networks:
+      - memoryos
+
+  # ─── Documentation Server ────────────────────────────────────────────────────
+  docs:
+    build:
+      context: .
+      dockerfile: docker/docs/Dockerfile
+    image: memoryos-docs:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./docs:/docs
+      - ./mkdocs.yml:/mkdocs.yml
+    command: mkdocs serve --dev-addr=0.0.0.0:8000
+    networks:
+      - memoryos
+
+  # ─── Flutter Dev Server (web preview) ────────────────────────────────────────
+  flutter-web:
+    build:
+      context: .
+      dockerfile: docker/flutter/Dockerfile
+    image: memoryos-flutter:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/flutter_app:/flutter_app
+    working_dir: /flutter_app
+    command: flutter run -d web-server --web-port 3000 --web-hostname 0.0.0.0
+    networks:
+      - memoryos
+
+networks:
+  memoryos:
+    driver: bridge
+
+volumes:
+  cargo-cache:
+  target-cache:

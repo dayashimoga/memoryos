@@ -1,0 +1,105 @@
+name: memoryos
+description: MemoryOS — Offline AI-Powered Personal Memory Operating System
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_bloc: ^8.1.3
+  equatable: ^2.0.5
+
+  # Navigation
+  go_router: ^13.2.0
+
+  # Database (FFI bridge to Rust)
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  path_provider: ^2.1.2
+
+  # FFI for Rust core engine
+  ffi: ^2.1.0
+  plugin_platform_interface: ^2.1.6
+
+  # File operations
+  file_picker: ^6.1.1
+  share_plus: ^7.2.1
+  image_picker: ^1.0.7
+
+  # UI Components
+  flutter_animate: ^4.5.0
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  lottie: ^3.0.0
+
+  # Local auth (biometrics for Vault)
+  local_auth: ^2.1.8
+
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+
+  # Permissions
+  permission_handler: ^11.3.0
+
+  # Connectivity
+  connectivity_plus: ^5.0.2
+
+  # Charts & visualization
+  fl_chart: ^0.67.0
+
+  # Markdown rendering
+  flutter_markdown: ^0.6.18
+
+  # JSON
+  json_annotation: ^4.8.1
+
+  # Intl
+  intl: ^0.19.0
+
+  # Logging
+  logger: ^2.1.0
+
+  # UUID
+  uuid: ^4.3.3
+
+  # HTTP (model downloads)
+  dio: ^5.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.1
+  bloc_test: ^9.1.7
+  mocktail: ^1.0.1
+  build_runner: ^2.4.8
+  json_serializable: ^6.7.1
+  integration_test:
+    sdk: flutter
+  golden_toolkit: ^0.15.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/images/
+    - assets/lottie/
+    - assets/fonts/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

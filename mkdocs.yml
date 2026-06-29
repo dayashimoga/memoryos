@@ -1,0 +1,89 @@
+site_name: MemoryOS Documentation
+site_description: Offline AI-Powered Personal Memory Operating System
+site_author: MemoryOS Contributors
+site_url: https://your-org.github.io/memoryos
+repo_url: https://github.com/your-org/memoryos
+repo_name: your-org/memoryos
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: deep-purple
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+    - content.code.copy
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mermaid2
+
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Installation: user-guide/installation.md
+      - Getting Started: user-guide/getting-started.md
+      - FAQ: user-guide/faq.md
+  - Architecture:
+      - System Architecture: architecture/system-architecture.md
+      - Component Diagrams: architecture/component-diagrams.md
+      - Sequence Diagrams: architecture/sequence-diagrams.md
+      - Deployment: architecture/deployment-architecture.md
+  - Requirements:
+      - Business: requirements/business-requirements.md
+      - Functional: requirements/functional-requirements.md
+      - Non-Functional: requirements/non-functional-requirements.md
+  - Design:
+      - UI/UX Design: design/ui-ux-design.md
+      - Database Design: design/database-design.md
+  - Testing:
+      - Strategy: testing/test-strategy.md
+      - Plan: testing/test-plan.md
+      - Report Template: testing/test-report-template.md
+  - Security:
+      - Threat Model: security/threat-model.md
+      - Privacy Model: security/privacy-model.md
+  - Operations:
+      - Monitoring: operations/monitoring.md
+      - Troubleshooting: operations/troubleshooting.md
+  - Deployment:
+      - Local Development: deployment/local-development.md
+      - Release Process: deployment/release-process.md
+  - Project:
+      - Roadmap: project/roadmap.md
+      - Changelog: project/changelog.md
+      - Status Report: project/status-report.md

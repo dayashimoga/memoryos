@@ -1,0 +1,80 @@
+import 'package:go_router/go_router.dart';
+import 'package:memoryos/features/home/pages/home_page.dart';
+import 'package:memoryos/features/search/pages/search_page.dart';
+import 'package:memoryos/features/timeline/pages/timeline_page.dart';
+import 'package:memoryos/features/collections/pages/collections_page.dart';
+import 'package:memoryos/features/chat/pages/chat_page.dart';
+import 'package:memoryos/features/vault/pages/vault_page.dart';
+import 'package:memoryos/features/settings/pages/settings_page.dart';
+import 'package:memoryos/features/onboarding/pages/onboarding_page.dart';
+import 'package:memoryos/features/file_detail/pages/file_detail_page.dart';
+import 'package:memoryos/features/models/pages/models_page.dart';
+import 'package:memoryos/features/duplicates/pages/duplicates_page.dart';
+import 'package:memoryos/features/learning/pages/learning_page.dart';
+import 'package:memoryos/features/shell/shell_page.dart';
+
+/// Application router configuration using GoRouter.
+class AppRouter {
+  static final router = GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingPage(),
+      ),
+      ShellRoute(
+        builder: (context, state, child) => ShellPage(child: child),
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const HomePage(),
+          ),
+          GoRoute(
+            path: '/search',
+            builder: (context, state) => SearchPage(
+              initialQuery: state.uri.queryParameters['q'],
+            ),
+          ),
+          GoRoute(
+            path: '/timeline',
+            builder: (context, state) => const TimelinePage(),
+          ),
+          GoRoute(
+            path: '/collections',
+            builder: (context, state) => const CollectionsPage(),
+          ),
+          GoRoute(
+            path: '/chat',
+            builder: (context, state) => const ChatPage(),
+          ),
+          GoRoute(
+            path: '/vault',
+            builder: (context, state) => const VaultPage(),
+          ),
+          GoRoute(
+            path: '/learning',
+            builder: (context, state) => const LearningPage(),
+          ),
+          GoRoute(
+            path: '/duplicates',
+            builder: (context, state) => const DuplicatesPage(),
+          ),
+          GoRoute(
+            path: '/models',
+            builder: (context, state) => const ModelsPage(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: '/file/:id',
+            builder: (context, state) => FileDetailPage(
+              fileId: state.pathParameters['id']!,
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}

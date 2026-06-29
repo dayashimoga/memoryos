@@ -1,0 +1,211 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  FLUTTER_VERSION: "3.19.0"
+
+jobs:
+  # ─── Rust Tests ─────────────────────────────────────────────────────────────
+  rust-test:
+    name: Rust Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-
+
+      - name: cargo fmt check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: cargo test
+        run: cargo test --workspace --all-features
+
+      - name: cargo test (release)
+        run: cargo test --workspace --release
+
+  # ─── Rust Coverage ──────────────────────────────────────────────────────────
+  rust-coverage:
+    name: Rust Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Generate coverage report
+        run: cargo tarpaulin --workspace --out Xml --output-dir coverage/
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage/cobertura.xml
+          fail_ci_if_error: false
+
+      - name: Coverage gate (≥ 90%)
+        run: |
+          COVERAGE=$(cargo tarpaulin --workspace --print-summary 2>&1 | grep -oP '\d+\.\d+(?=%)' | tail -1)
+          echo "Coverage: ${COVERAGE}%"
+          python3 -c "
+          import sys
+          cov = float('${COVERAGE}')
+          print(f'Coverage: {cov:.1f}%')
+          if cov < 90.0:
+              print(f'FAIL: Coverage {cov:.1f}% is below the 90% threshold')
+              sys.exit(1)
+          else:
+              print(f'PASS: Coverage {cov:.1f}% meets the 90% threshold')
+          "
+
+  # ─── Flutter Tests ──────────────────────────────────────────────────────────
+  flutter-test:
+    name: Flutter Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: apps/flutter_app
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: apps/flutter_app
+        run: flutter analyze --fatal-infos
+
+      - name: Flutter format check
+        working-directory: apps/flutter_app
+        run: dart format --set-exit-if-changed .
+
+      - name: Flutter test
+        working-directory: apps/flutter_app
+        run: flutter test --coverage
+
+      - name: Upload Flutter coverage
+        uses: codecov/codecov-action@v4
+        with:
+          file: apps/flutter_app/coverage/lcov.info
+          fail_ci_if_error: false
+
+  # ─── Security Scan ──────────────────────────────────────────────────────────
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+
+      - name: Run cargo-audit
+        run: cargo audit
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: 1
+          ignore-unfixed: true
+
+  # ─── Build Matrix ───────────────────────────────────────────────────────────
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    needs: [rust-test, flutter-test]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux
+          - os: windows-latest
+            target: windows
+          - os: macos-latest
+            target: macos
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: apps/flutter_app
+        run: flutter pub get
+
+      - name: Build Rust crates
+        run: cargo build --workspace --release
+
+      - name: Build Flutter (Linux)
+        if: matrix.target == 'linux'
+        working-directory: apps/flutter_app
+        run: flutter build linux --release
+
+      - name: Build Flutter (Windows)
+        if: matrix.target == 'windows'
+        working-directory: apps/flutter_app
+        run: flutter build windows --release
+
+      - name: Build Flutter (macOS)
+        if: matrix.target == 'macos'
+        working-directory: apps/flutter_app
+        run: flutter build macos --release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memoryos-${{ matrix.target }}
+          path: |
+            apps/flutter_app/build/linux/x64/release/bundle/
+            apps/flutter_app/build/windows/x64/runner/Release/
+            apps/flutter_app/build/macos/Build/Products/Release/
+          if-no-files-found: warn
