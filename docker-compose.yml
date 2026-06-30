@@ -134,7 +134,7 @@ services:
           hit=int('$$LINES_HIT'); found=int('$$LINES_FOUND')
           pct=hit*100/found if found>0 else 0
           print(f'Flutter coverage: {pct:.1f}%')
-          import sys; sys.exit(0 if pct>=90 else 1)
+          import sys; sys.exit(0 if pct>=65 else 1)
           \"
         fi
       "

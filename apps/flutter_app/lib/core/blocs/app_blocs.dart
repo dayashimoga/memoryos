@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:memoryos/core/domain/entities.dart';
@@ -614,11 +615,9 @@ class CollectionsBloc extends Bloc<CollectionsEvent, CollectionsState> {
 }
 
 // Helper extension for debounce (requires rxdart or manual impl)
-extension on Stream {
-  Stream<T> debounce<T>(Duration d) =>
-      cast<T>().transform(StreamTransformer.fromHandlers(
+extension _StreamDebounce<T> on Stream<T> {
+  Stream<T> debounce(Duration d) => transform(StreamTransformer.fromHandlers(
         handleData: (data, sink) => sink.add(data),
       ));
-  Stream<T> switchMap<T>(Stream<T> Function(dynamic) mapper) =>
-      asyncExpand(mapper);
+  Stream<R> switchMap<R>(Stream<R> Function(T) mapper) => asyncExpand(mapper);
 }
