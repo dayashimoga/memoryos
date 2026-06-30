@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:memoryos/core/di/service_locator.dart';
+import 'package:memoryos/core/ffi/rust_ffi.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
@@ -292,6 +293,28 @@ class _ToolboxPageState extends State<ToolboxPage>
       ),
       body: Column(
         children: [
+          // FFI availability banner
+          if (!RustFfi.isAvailable)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              color: DesignTokens.warning.withOpacity(0.10),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded,
+                      size: 16, color: DesignTokens.warning),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'Stub mode — build with native Rust library for real conversions',
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: DesignTokens.warning),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           // Status Strip
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

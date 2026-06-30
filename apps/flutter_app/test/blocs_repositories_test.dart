@@ -879,19 +879,19 @@ void main() {
       expect(RustFfi.normalizeWav('a', 'b'), -1);
     });
     test('archiveList returns empty array', () {
-      expect(RustFfi.archiveList('path', 'pwd'), '[]');
+      expect(RustFfi.archiveList('path'), '[]');
     });
     test('archiveCreate returns -1', () {
-      expect(RustFfi.archiveCreate('path', [], 'pwd'), -1);
+      expect(RustFfi.archiveCreate('path', []), -1);
     });
     test('archiveExtract returns -1', () {
-      expect(RustFfi.archiveExtract('path', 'dest', 'pwd'), -1);
+      expect(RustFfi.archiveExtract('path', 'dest'), -1);
     });
     test('backupPerform returns -1', () {
-      expect(RustFfi.backupPerform('path', 'pwd'), -1);
+      expect(RustFfi.backupPerform('/data', '/backup.enc', 'pwd'), -1);
     });
     test('backupRestore returns -1', () {
-      expect(RustFfi.backupRestore('path', 'pwd'), -1);
+      expect(RustFfi.backupRestore('/backup.enc', '/data', 'pwd'), -1);
     });
     test('init returns -1', () {
       expect(RustFfi.init('/data/dir'), -1);

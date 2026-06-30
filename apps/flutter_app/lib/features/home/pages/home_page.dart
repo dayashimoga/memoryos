@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/domain/repositories.dart';
+import 'package:memoryos/core/ffi/rust_ffi.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
@@ -26,6 +27,10 @@ class HomePage extends StatelessWidget {
               backgroundColor: DesignTokens.error,
             ),
           );
+        }
+        // Auto-trigger storage scan once files are loaded (so duplicate count shows)
+        if (state.status == HomeStatus.loaded && state.stats.totalFiles > 0) {
+          context.read<StorageBloc>().add(StorageScanRequested());
         }
       },
       builder: (context, state) {
@@ -49,12 +54,17 @@ class HomePage extends StatelessWidget {
                       _HeroSearchBar().animate().fadeIn(duration: 300.ms),
                       const SizedBox(height: 20),
 
+                      // ── Motto Hero Banner (shown on first launch / no files) ──
+                      if (state.stats.totalFiles == 0 &&
+                          state.status != HomeStatus.loading)
+                        _MottoHeroBanner().animate().fadeIn(delay: 40.ms),
+
                       // ── Storage Overview ─────────────────────────
                       if (state.status == HomeStatus.loading)
                         const SkeletonBox(height: 120, radius: 16)
                             .animate()
                             .fadeIn()
-                      else
+                      else if (state.stats.totalFiles > 0)
                         _StorageCard(
                           stats: state.stats,
                           indexStats: state.indexStats,
@@ -76,11 +86,12 @@ class HomePage extends StatelessWidget {
                       const SizedBox(height: 20),
 
                       // ── Recent files header ───────────────────────
-                      SectionHeader(
-                        title: 'Recent Files',
-                        action: 'Timeline',
-                        onAction: () => context.go('/timeline'),
-                      ),
+                      if (state.stats.totalFiles > 0)
+                        SectionHeader(
+                          title: 'Recent Files',
+                          action: 'Timeline',
+                          onAction: () => context.go('/timeline'),
+                        ),
                       const SizedBox(height: 4),
                     ],
                   ),
@@ -103,14 +114,9 @@ class HomePage extends StatelessWidget {
                 )
               else if (state.recentFiles.isEmpty)
                 SliverToBoxAdapter(
-                  child: EmptyStateWidget(
-                    icon: Icons.inbox_outlined,
-                    title: 'No files yet',
-                    subtitle:
-                        'Import files to start building your Memory Library.',
-                    actionLabel: 'Import Files',
-                    onAction: () => _showImportSheet(context),
-                    iconColor: DesignTokens.brand,
+                  child: _MottoHeroBanner(
+                    showStartCta: true,
+                    onImport: () => _showImportSheet(context),
                   ),
                 )
               else
@@ -155,6 +161,7 @@ class HomePage extends StatelessWidget {
 class _HomeAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final isEngineActive = RustFfi.isAvailable;
     return SliverAppBar(
       floating: true,
       snap: true,
@@ -182,6 +189,54 @@ class _HomeAppBar extends StatelessWidget {
         ),
       ),
       actions: [
+        // FFI Engine Status Badge
+        Tooltip(
+          message: isEngineActive
+              ? 'Native Rust engine active — all features available'
+              : 'Running in stub mode — build with native library for full features',
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: (isEngineActive ? DesignTokens.success : DesignTokens.warning)
+                  .withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: (isEngineActive
+                        ? DesignTokens.success
+                        : DesignTokens.warning)
+                    .withOpacity(0.4),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: isEngineActive
+                        ? DesignTokens.success
+                        : DesignTokens.warning,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  isEngineActive ? 'Engine Active' : 'Stub Mode',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                    color: isEngineActive
+                        ? DesignTokens.success
+                        : DesignTokens.warning,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         IconButton(
           icon: const Icon(Icons.search_rounded),
           onPressed: () => context.go('/search'),
@@ -199,6 +254,190 @@ class _HomeAppBar extends StatelessWidget {
         ),
         const SizedBox(width: 4),
       ],
+    );
+  }
+}
+
+// ─── Motto Hero Banner ──────────────────────────────────────────────
+
+/// Shown when no files are indexed yet. Communicates the app's core purpose.
+class _MottoHeroBanner extends StatelessWidget {
+  final bool showStartCta;
+  final VoidCallback? onImport;
+
+  const _MottoHeroBanner({this.showStartCta = false, this.onImport});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: isDark
+              ? [
+                  const Color(0xFF1E1B4B),
+                  const Color(0xFF0F172A),
+                ]
+              : [
+                  const Color(0xFFEEF2FF),
+                  const Color(0xFFF0FDF4),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
+        border: Border.all(
+          color: DesignTokens.brand.withOpacity(isDark ? 0.25 : 0.15),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Eyebrow
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: DesignTokens.brand.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Text(
+              '🧠  Your Private Digital Brain',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: DesignTokens.brand,
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Main headline
+          Text(
+            'Everything you save,\ninstantly recalled.',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  letterSpacing: -0.5,
+                ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'MemoryOS indexes your files, photos, documents and notes locally — no cloud, no subscriptions, no privacy risk.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: isDark
+                      ? const Color(0xFF94A3B8)
+                      : const Color(0xFF475569),
+                  height: 1.5,
+                ),
+          ),
+          const SizedBox(height: 20),
+          // Three value pillars
+          Row(
+            children: [
+              _ValuePillar(
+                icon: Icons.search_rounded,
+                color: DesignTokens.brand,
+                label: 'Search\nEverything',
+              ),
+              const SizedBox(width: 12),
+              _ValuePillar(
+                icon: Icons.auto_awesome_rounded,
+                color: DesignTokens.accent,
+                label: 'Offline\nAI',
+              ),
+              const SizedBox(width: 12),
+              _ValuePillar(
+                icon: Icons.lock_rounded,
+                color: const Color(0xFF10B981),
+                label: 'Secure\nVault',
+              ),
+              const SizedBox(width: 12),
+              _ValuePillar(
+                icon: Icons.construction_rounded,
+                color: Colors.orange,
+                label: 'File\nToolbox',
+              ),
+            ],
+          ),
+          if (showStartCta) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onImport,
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('Import Your First Files',
+                    style: TextStyle(
+                        fontFamily: 'Inter', fontWeight: FontWeight.w700)),
+                style: FilledButton.styleFrom(
+                  backgroundColor: DesignTokens.brand,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(DesignTokens.radiusMd)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Privacy-first • 100% offline • Open source',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 11,
+                  color: isDark
+                      ? const Color(0xFF475569)
+                      : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ValuePillar extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String label;
+
+  const _ValuePillar(
+      {required this.icon, required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(isDark ? 0.08 : 0.06),
+          borderRadius: BorderRadius.circular(DesignTokens.radiusMd),
+          border: Border.all(color: color.withOpacity(0.15)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -811,38 +1050,44 @@ class _ImportSheet extends StatelessWidget {
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context); // Dismiss sheet first
     try {
+      fp.FilePickerResult? result;
       if (optionName == 'Photo Library') {
-        final result = await fp.FilePicker.platform.pickFiles(
+        result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.media,
-          allowMultiple: false,
+          allowMultiple: true,
         );
-        if (result != null && result.files.single.path != null) {
-          final path = result.files.single.path!;
-          homeBloc.add(HomeFileImported(path));
-        }
       } else if (optionName == 'Files & Folders' ||
           optionName == 'Screenshots Folder') {
-        final result = await fp.FilePicker.platform.pickFiles(
+        result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.any,
-          allowMultiple: false,
+          allowMultiple: true,
         );
-        if (result != null && result.files.single.path != null) {
-          final path = result.files.single.path!;
-          homeBloc.add(HomeFileImported(path));
-        }
       } else if (optionName == 'Voice Note') {
-        final result = await fp.FilePicker.platform.pickFiles(
+        result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.audio,
-          allowMultiple: false,
+          allowMultiple: true,
         );
-        if (result != null && result.files.single.path != null) {
-          final path = result.files.single.path!;
-          homeBloc.add(HomeFileImported(path));
-        }
       } else if (optionName == 'URL / Web Page') {
-        if (context.mounted) {
-          _showUrlImportDialog(context);
+        if (context.mounted) _showUrlImportDialog(context);
+        return;
+      }
+
+      if (result != null && result.files.isNotEmpty) {
+        int imported = 0;
+        for (final file in result.files) {
+          if (file.path != null) {
+            homeBloc.add(HomeFileImported(file.path!));
+            imported++;
+          }
         }
+        messenger.showSnackBar(SnackBar(
+          content: Text(
+              imported == 1
+                  ? 'Importing 1 file into MemoryOS…'
+                  : 'Importing $imported files into MemoryOS…'),
+          backgroundColor: DesignTokens.brand,
+          duration: const Duration(seconds: 3),
+        ));
       }
     } catch (e) {
       messenger.showSnackBar(
