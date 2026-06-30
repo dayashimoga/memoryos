@@ -7,11 +7,22 @@ import 'package:memoryos/features/onboarding/pages/onboarding_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize dependency injection and core services
-  await ServiceLocator.initialize();
+  try {
+    // Initialize dependency injection and core services
+    await ServiceLocator.initialize();
+  } catch (e, stackTrace) {
+    debugPrint('[MemoryOS] ServiceLocator initialization failed: $e');
+    debugPrint(stackTrace.toString());
+  }
 
-  // Check first-launch onboarding status
-  final onboardingDone = await isOnboardingComplete();
+  bool onboardingDone = false;
+  try {
+    // Check first-launch onboarding status
+    onboardingDone = await isOnboardingComplete();
+  } catch (e, stackTrace) {
+    debugPrint('[MemoryOS] Onboarding check failed: $e');
+    debugPrint(stackTrace.toString());
+  }
   AppRouter.setOnboardingComplete(onboardingDone);
 
   runApp(const MemoryOSApp());

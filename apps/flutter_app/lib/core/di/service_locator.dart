@@ -50,22 +50,20 @@ class ServiceLocator {
     // Load Rust FFI Dynamic Library
     RustFfi.initialize();
 
-    // Initialize the Rust engine with a writable data directory.
-    // This opens the SQLite database and sets up all internal state.
+    // Initialize the Rust engine with a writable data directory in the background.
+    // This prevents any platform-channel delays (e.g. path_provider) from blocking app startup.
     if (RustFfi.isAvailable && !kIsWeb) {
-      try {
-        final dir = await getApplicationDocumentsDirectory();
+      getApplicationDocumentsDirectory().then((dir) {
         final dataDir = '${dir.path}/memoryos';
         final initResult = RustFfi.init(dataDir);
         if (initResult != 0) {
-          // Non-zero means the engine reported an error; log but continue with stub fallback
           // ignore: avoid_print
           print('[MemoryOS] RustFfi.init returned $initResult for "$dataDir"');
         }
-      } catch (e) {
+      }).catchError((e) {
         // ignore: avoid_print
         print('[MemoryOS] Failed to initialize Rust engine data dir: $e');
-      }
+      });
     }
 
     // Repositories (stubs unless overridden, fallback internally checks availability)
