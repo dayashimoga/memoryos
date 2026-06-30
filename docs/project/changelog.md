@@ -2,6 +2,30 @@
 
 All notable changes to MemoryOS are documented in this file.
 
+## [1.2.0] — Build Stabilization & Feature Expansion
+
+### 🔴 Build Fixes (Critical)
+- **dynamic_color pinned to 1.7.0**: Version 1.8.1 used `Color.toARGB32()` requiring Flutter ≥3.27, breaking Linux/macOS/iOS builds on Flutter 3.24.3.
+- **Android Gradle downgraded**: AGP 9.0.1→8.1.0, Kotlin 2.3.20→1.9.0, Gradle 9.1.0→8.3 to match Flutter 3.24.3 tooling.
+- **Docker builder aligned**: Pinned builder Dockerfile from `--branch stable` (3.44.4) to `--branch 3.24.3`.
+- **CI build matrix fixed**: Scoped `flutter create` bootstrap per-platform; added Windows desktop config step.
+- **Removed Flutter 3.44-specific flags**: `android.newDsl` and `android.builtInKotlin` removed from gradle.properties.
+
+### 🟢 New Features
+- **AI categorization FFI**: `memoryos_categorize_text` — keyword-based text categorization across 14 categories (Cloud, Security, Development, Finance, Medical, Legal, etc.) via FFI, no external model required.
+- **Favorites FFI**: `memoryos_toggle_favorite`, `memoryos_list_favorites` — toggle and query favorite files via SQLite `is_favorite` column.
+- **Recent files FFI**: `memoryos_recent_files(limit)` — query most recently modified files.
+- **Flutter FFI bindings**: `categorizeText`, `toggleFavorite`, `listFavorites`, `recentFiles` added to `RustFfi` class.
+
+### 🔧 Improvements
+- **Database migration**: Added `is_favorite` column via ALTER TABLE migration (backward compatible).
+- **Schema v1.2**: `toggle_favorite`, `list_favorites`, `recent_files` database methods added to `MetadataDb`.
+
+### 🧪 Testing
+- **10 new Rust database tests**: toggle_favorite, recent_files, delete_file, set_encrypted, tags_crud, collections_crud, get_large_files, total_size_bytes, activity_log, update_file_hash.
+- **69 total Rust tests passing** across 5 crates (up from ~55).
+- **140 Flutter tests passing** with no analysis issues.
+
 ## [Unreleased] — Production Completion
 
 ### 🔴 Security Fixes

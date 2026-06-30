@@ -37,6 +37,10 @@ impl MetadataDb {
 
     fn run_migrations(&self) -> Result<(), CoreError> {
         self.conn.execute_batch(include_str!("sql/schema.sql"))?;
+        // v1.2 migration: add is_favorite column if not exists
+        let _ = self
+            .conn
+            .execute_batch("ALTER TABLE files ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;");
         info!("Database migrations applied");
         Ok(())
     }
@@ -423,6 +427,41 @@ impl MetadataDb {
         Ok(())
     }
 
+    // ── Favorites ──────────────────────────────────────────────────────────────
+
+    /// Toggle the favorite flag for a file.
+    pub fn toggle_favorite(&self, id: &Uuid) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE files SET is_favorite = CASE WHEN is_favorite = 0 THEN 1 ELSE 0 END WHERE id = ?1",
+            params![id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// List all favorited files.
+    pub fn list_favorites(&self) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM files WHERE is_favorite = 1 ORDER BY modified_at DESC")?;
+        let entries = stmt
+            .query_map([], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    // ── Recent files ──────────────────────────────────────────────────────────
+
+    /// Get the most recently modified files.
+    pub fn recent_files(&self, limit: usize) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT * FROM files ORDER BY modified_at DESC LIMIT ?1")?;
+        let entries = stmt
+            .query_map(params![limit as i64], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
     fn row_to_file_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileEntry> {
         let file_type_str: String = row.get("file_type")?;
         let status_str: String = row.get("indexing_status")?;
@@ -526,5 +565,148 @@ mod tests {
 
         let updated = db.get_file_by_id(&entry.id).unwrap().unwrap();
         assert_eq!(updated.indexing_status, IndexingStatus::Completed);
+    }
+
+    #[test]
+    fn test_toggle_favorite() {
+        let db = test_db();
+        let entry = FileEntry::new("/fav.txt", FileType::Text, 100);
+        db.insert_file(&entry).unwrap();
+
+        // Initially no favorites
+        assert!(db.list_favorites().unwrap().is_empty());
+
+        // Toggle on
+        db.toggle_favorite(&entry.id).unwrap();
+        let favs = db.list_favorites().unwrap();
+        assert_eq!(favs.len(), 1);
+        assert_eq!(favs[0].id, entry.id);
+
+        // Toggle off
+        db.toggle_favorite(&entry.id).unwrap();
+        assert!(db.list_favorites().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_recent_files() {
+        let db = test_db();
+        db.insert_file(&FileEntry::new("/old.txt", FileType::Text, 10))
+            .unwrap();
+        db.insert_file(&FileEntry::new("/new.txt", FileType::Text, 20))
+            .unwrap();
+
+        let recent = db.recent_files(1).unwrap();
+        assert_eq!(recent.len(), 1);
+
+        let recent_all = db.recent_files(10).unwrap();
+        assert_eq!(recent_all.len(), 2);
+    }
+
+    #[test]
+    fn test_delete_file() {
+        let db = test_db();
+        let entry = FileEntry::new("/delete_me.txt", FileType::Text, 10);
+        db.insert_file(&entry).unwrap();
+        assert_eq!(db.count_files().unwrap(), 1);
+
+        db.delete_file(&entry.id).unwrap();
+        assert_eq!(db.count_files().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_set_encrypted() {
+        let db = test_db();
+        let entry = FileEntry::new("/secret.txt", FileType::Text, 10);
+        db.insert_file(&entry).unwrap();
+
+        db.set_encrypted(&entry.id, true).unwrap();
+        let encrypted = db.list_encrypted_files().unwrap();
+        assert_eq!(encrypted.len(), 1);
+
+        db.set_encrypted(&entry.id, false).unwrap();
+        assert!(db.list_encrypted_files().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_tags_crud() {
+        let db = test_db();
+        let tag = crate::models::Tag::new("important");
+        db.insert_tag(&tag).unwrap();
+
+        let tags = db.list_tags().unwrap();
+        assert_eq!(tags.len(), 1);
+        assert_eq!(tags[0].name, "important");
+
+        // Tag a file
+        let entry = FileEntry::new("/tagged.txt", FileType::Text, 10);
+        db.insert_file(&entry).unwrap();
+        db.add_tag_to_file(&entry.id, &tag.id).unwrap();
+
+        let file_tags = db.get_tags_for_file(&entry.id).unwrap();
+        assert_eq!(file_tags.len(), 1);
+        assert_eq!(file_tags[0], "important");
+    }
+
+    #[test]
+    fn test_collections_crud() {
+        let db = test_db();
+        let col = crate::models::Collection::new("My Collection");
+        db.insert_collection(&col).unwrap();
+
+        let cols = db.list_collections().unwrap();
+        assert_eq!(cols.len(), 1);
+        assert_eq!(cols[0].name, "My Collection");
+
+        let entry = FileEntry::new("/in_collection.txt", FileType::Text, 10);
+        db.insert_file(&entry).unwrap();
+        db.add_file_to_collection(&col.id, &entry.id).unwrap();
+
+        let files = db.get_files_in_collection(&col.id).unwrap();
+        assert_eq!(files.len(), 1);
+
+        db.delete_collection(&col.id).unwrap();
+        assert!(db.list_collections().unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_get_large_files() {
+        let db = test_db();
+        db.insert_file(&FileEntry::new("/small.txt", FileType::Text, 100))
+            .unwrap();
+        db.insert_file(&FileEntry::new("/big.bin", FileType::Unknown, 100_000_000))
+            .unwrap();
+
+        let large = db.get_large_files(50_000_000).unwrap();
+        assert_eq!(large.len(), 1);
+        assert_eq!(large[0].filename, "big.bin");
+    }
+
+    #[test]
+    fn test_total_size_bytes() {
+        let db = test_db();
+        db.insert_file(&FileEntry::new("/a.txt", FileType::Text, 100))
+            .unwrap();
+        db.insert_file(&FileEntry::new("/b.txt", FileType::Text, 200))
+            .unwrap();
+        assert_eq!(db.total_size_bytes().unwrap(), 300);
+    }
+
+    #[test]
+    fn test_activity_log() {
+        let db = test_db();
+        db.log_activity("file_opened", None, Some("test detail"))
+            .unwrap();
+        // Activity log is write-only in this API; just verify no panic
+    }
+
+    #[test]
+    fn test_update_file_hash() {
+        let db = test_db();
+        let entry = FileEntry::new("/hashme.txt", FileType::Text, 10);
+        db.insert_file(&entry).unwrap();
+
+        db.update_file_hash(&entry.id, "abc123hash").unwrap();
+        let updated = db.get_file_by_id(&entry.id).unwrap().unwrap();
+        assert_eq!(updated.sha256_hash, Some("abc123hash".to_string()));
     }
 }

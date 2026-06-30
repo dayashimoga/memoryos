@@ -518,4 +518,77 @@ class RustFfi {
     malloc.free(idPtr);
     return res;
   }
+
+  // ── AI Categorization ──────────────────────────────────────────────
+
+  /// Categorize text by keywords. Returns JSON array of category strings.
+  static String categorizeText(String text) {
+    if (!isAvailable) return '["Unknown"]';
+    final textPtr = text.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
+          Pointer<Utf8> Function(Pointer<Utf8>)>('memoryos_categorize_text');
+      final ptr = func(textPtr);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '["Unknown"]';
+    } finally {
+      malloc.free(textPtr);
+    }
+  }
+
+  // ── Favorites ──────────────────────────────────────────────────────
+
+  /// Toggle favorite status for a file. Returns 0 on success.
+  static int toggleFavorite(String fileId) {
+    if (!isAvailable) return -1;
+    final idPtr = fileId.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Int32 Function(Pointer<Utf8>),
+          int Function(Pointer<Utf8>)>('memoryos_toggle_favorite');
+      return func(idPtr);
+    } catch (_) {
+      return -1;
+    } finally {
+      malloc.free(idPtr);
+    }
+  }
+
+  /// List favorite files as JSON array.
+  static String listFavorites() {
+    if (!isAvailable) return '[]';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(),
+          Pointer<Utf8> Function()>('memoryos_list_favorites');
+      final ptr = func();
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    }
+  }
+
+  // ── Recent files ───────────────────────────────────────────────────
+
+  /// Get recently modified files as JSON array.
+  static String recentFiles(int limit) {
+    if (!isAvailable) return '[]';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(Int32),
+          Pointer<Utf8> Function(int)>('memoryos_recent_files');
+      final ptr = func(limit);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    }
+  }
 }

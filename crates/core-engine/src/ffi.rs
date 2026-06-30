@@ -636,3 +636,189 @@ pub extern "C" fn memoryos_hash_file(file_id: *const c_char) -> c_int {
         None => -1,
     }
 }
+
+// ── AI Categorization (keyword-based, no external model needed) ────────────
+
+/// Categorize text content by keywords. Returns JSON array of category strings.
+#[no_mangle]
+pub extern "C" fn memoryos_categorize_text(text: *const c_char) -> *mut c_char {
+    let text_str = unsafe { str_from_ptr(text) }.unwrap_or("");
+    if text_str.is_empty() {
+        return cstring_or_empty(r#"["Unknown"]"#);
+    }
+
+    let categories = categorize_by_keywords(text_str);
+    let json = serde_json::to_string(&categories).unwrap_or_else(|_| r#"["Unknown"]"#.into());
+    cstring_or_empty(&json)
+}
+
+/// Keyword-based text categorization (fast, offline, no model required).
+fn categorize_by_keywords(text: &str) -> Vec<&'static str> {
+    let text_lower = text.to_lowercase();
+    let mut categories = Vec::new();
+
+    let rules: &[(&[&str], &str)] = &[
+        (
+            &[
+                "aws",
+                "azure",
+                "gcp",
+                "kubernetes",
+                "docker",
+                "cloud",
+                "ec2",
+                "s3",
+            ],
+            "Cloud",
+        ),
+        (
+            &[
+                "security",
+                "vulnerability",
+                "cve",
+                "exploit",
+                "firewall",
+                "tls",
+                "ssl",
+            ],
+            "Security",
+        ),
+        (
+            &[
+                "rust",
+                "python",
+                "javascript",
+                "typescript",
+                "code",
+                "function",
+                "class",
+                "git",
+            ],
+            "Development",
+        ),
+        (
+            &[
+                "invoice",
+                "billing",
+                "payment",
+                "amount due",
+                "vat",
+                "tax id",
+            ],
+            "Invoice",
+        ),
+        (
+            &["receipt", "total", "subtotal", "cash", "card", "purchased"],
+            "Receipt",
+        ),
+        (
+            &["meeting", "agenda", "minutes", "attendees", "action items"],
+            "Meeting",
+        ),
+        (
+            &["chess", "opening", "endgame", "pawn", "rook", "bishop"],
+            "Chess",
+        ),
+        (
+            &["learn", "tutorial", "course", "study", "flashcard", "quiz"],
+            "Learning",
+        ),
+        (
+            &[
+                "flight",
+                "hotel",
+                "itinerary",
+                "passport",
+                "visa",
+                "booking",
+            ],
+            "Travel",
+        ),
+        (
+            &[
+                "finance",
+                "budget",
+                "investment",
+                "stock",
+                "portfolio",
+                "bank",
+            ],
+            "Finance",
+        ),
+        (
+            &["medical", "health", "patient", "diagnosis", "prescription"],
+            "Medical",
+        ),
+        (
+            &["contract", "legal", "clause", "agreement", "terms"],
+            "Legal",
+        ),
+        (
+            &["project", "milestone", "sprint", "roadmap", "deliverable"],
+            "Project",
+        ),
+        (&["screenshot", "capture", "screen"], "Screenshot"),
+    ];
+
+    for (keywords, category) in rules {
+        if keywords.iter().any(|kw| text_lower.contains(kw)) {
+            categories.push(*category);
+        }
+    }
+
+    if categories.is_empty() {
+        categories.push("Unknown");
+    }
+    categories
+}
+
+// ── Favorites ──────────────────────────────────────────────────────────────
+
+/// Toggle favorite status for a file. Returns 0 on success.
+#[no_mangle]
+pub extern "C" fn memoryos_toggle_favorite(file_id: *const c_char) -> c_int {
+    let id_str = unsafe { str_from_ptr(file_id) }.unwrap_or("");
+    let f_uuid = match uuid::Uuid::parse_str(id_str) {
+        Ok(u) => u,
+        Err(_) => return -1,
+    };
+
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => match db.toggle_favorite(&f_uuid) {
+            Ok(_) => 0,
+            Err(_) => -1,
+        },
+        None => -1,
+    }
+}
+
+/// List favorite files as JSON array.
+#[no_mangle]
+pub extern "C" fn memoryos_list_favorites() -> *mut c_char {
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            let files = db.list_favorites().unwrap_or_default();
+            let json = serde_json::to_string(&files).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        None => cstring_or_empty("[]"),
+    }
+}
+
+// ── Recent items ───────────────────────────────────────────────────────────
+
+/// Get recently accessed files as JSON array (last N files by modified date).
+#[no_mangle]
+pub extern "C" fn memoryos_recent_files(limit: c_int) -> *mut c_char {
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            let files = db.recent_files(limit as usize).unwrap_or_default();
+            let json = serde_json::to_string(&files).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        None => cstring_or_empty("[]"),
+    }
+}
