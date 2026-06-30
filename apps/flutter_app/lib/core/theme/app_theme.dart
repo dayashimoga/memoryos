@@ -124,7 +124,7 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: const CardTheme(
         elevation: 0,
         color: DesignTokens.lightCard,
         surfaceTintColor: Colors.transparent,
@@ -281,7 +281,7 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: const CardTheme(
         elevation: 0,
         color: DesignTokens.darkCard,
         surfaceTintColor: Colors.transparent,
