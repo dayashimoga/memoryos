@@ -10,8 +10,10 @@ if ($Target -eq "release") {
     cargo build --workspace --release
     Push-Location "apps\flutter_app"
     flutter build windows --release
+    New-Item -ItemType Directory -Force -Path "build\windows\x64\runner\Release"
+    Copy-Item -Path "..\..\target\release\core_engine.dll" -Destination "build\windows\x64\runner\Release\" -Force
     Pop-Location
-} else {
+else {
     cargo build --workspace
 }
 

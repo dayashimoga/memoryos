@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -545,6 +546,8 @@ class _QuickActions extends StatelessWidget {
     _QA(Icons.add_photo_alternate_rounded, 'Import', DesignTokens.brand, null),
     _QA(Icons.chat_bubble_rounded, 'Ask AI', DesignTokens.accent, '/chat'),
     _QA(Icons.hub_rounded, 'Galaxy', Color(0xFF8B5CF6), '/galaxy'),
+    _QA(Icons.transform_rounded, 'Converter', Colors.orange, '/toolbox'),
+    _QA(Icons.move_to_inbox_rounded, 'Organizer', Colors.teal, '/inbox'),
     _QA(Icons.auto_delete_rounded, 'Cleanup', DesignTokens.warning,
         '/duplicates'),
     _QA(Icons.school_rounded, 'Study', DesignTokens.success, '/learning'),
@@ -803,6 +806,85 @@ class _ImportSheet extends StatelessWidget {
     (Icons.link_rounded, 'URL / Web Page', 'Save a web page to your library'),
   ];
 
+  Future<void> _handleImport(BuildContext context, String optionName) async {
+    Navigator.pop(context); // Dismiss sheet first
+    try {
+      if (optionName == 'Photo Library') {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.media,
+          allowMultiple: false,
+        );
+        if (result != null && result.files.single.path != null) {
+          final path = result.files.single.path!;
+          context.read<HomeBloc>().add(HomeFileImported(path));
+        }
+      } else if (optionName == 'Files & Folders' || optionName == 'Screenshots Folder') {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.any,
+          allowMultiple: false,
+        );
+        if (result != null && result.files.single.path != null) {
+          final path = result.files.single.path!;
+          context.read<HomeBloc>().add(HomeFileImported(path));
+        }
+      } else if (optionName == 'Voice Note') {
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.audio,
+          allowMultiple: false,
+        );
+        if (result != null && result.files.single.path != null) {
+          final path = result.files.single.path!;
+          context.read<HomeBloc>().add(HomeFileImported(path));
+        }
+      } else if (optionName == 'URL / Web Page') {
+        _showUrlImportDialog(context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to import: $e'),
+          backgroundColor: DesignTokens.error,
+        ),
+      );
+    }
+  }
+
+  void _showUrlImportDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Import Web Page'),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DesignTokens.radiusXl)),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'https://example.com',
+            labelText: 'Web Page URL',
+          ),
+          keyboardType: TextInputType.url,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final url = controller.text.trim();
+              if (url.isNotEmpty) {
+                Navigator.pop(ctx);
+                context.read<HomeBloc>().add(HomeFileImported(url));
+              }
+            },
+            child: const Text('Import'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -848,7 +930,7 @@ class _ImportSheet extends StatelessWidget {
                         fontSize: 14)),
                 subtitle: Text(opt.$3,
                     style: const TextStyle(fontFamily: 'Inter', fontSize: 12)),
-                onTap: () => Navigator.pop(context),
+                onTap: () => _handleImport(context, opt.$2),
               ),
             ),
           ],

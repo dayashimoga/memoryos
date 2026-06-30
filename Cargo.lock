@@ -1086,6 +1086,7 @@ dependencies = [
  "crossbeam-channel",
  "getrandom 0.2.17",
  "image",
+ "memoryos-duplicate-engine",
  "notify",
  "proptest",
  "rayon",

@@ -32,6 +32,7 @@ rayon = "1.8"
 crossbeam-channel = "0.5"
 zip = { workspace = true }
 image = "0.24"
+memoryos-duplicate-engine = { path = "../duplicate-engine" }
 
 [dev-dependencies]
 proptest = { workspace = true }

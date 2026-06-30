@@ -222,7 +222,18 @@ pub extern "C" fn memoryos_index_file(path: *const c_char) -> c_int {
     let ext = file_path.extension().and_then(|e| e.to_str()).unwrap_or("");
     let file_type = FileType::from_extension(ext);
     let size_bytes = metadata.len();
-    let entry = FileEntry::new(path_str, file_type, size_bytes);
+    let mut entry = FileEntry::new(path_str, file_type, size_bytes);
+
+    // Compute hashes
+    entry.sha256_hash = duplicate_engine::sha256_file(path_str).ok();
+    if matches!(
+        ext.to_lowercase().as_str(),
+        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp"
+    ) {
+        entry.phash = duplicate_engine::phash::compute_phash(path_str)
+            .ok()
+            .map(|h| h.to_string());
+    }
 
     let mut guard = DB.lock().unwrap();
     match guard.as_mut() {
@@ -820,5 +831,94 @@ pub extern "C" fn memoryos_recent_files(limit: c_int) -> *mut c_char {
             cstring_or_empty(&json)
         }
         None => cstring_or_empty("[]"),
+    }
+}
+
+/// Get groups of duplicate files as JSON.
+#[no_mangle]
+pub extern "C" fn memoryos_get_duplicate_groups() -> *mut c_char {
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => match db.get_duplicate_groups() {
+            Ok(groups) => {
+                let mut json_groups = Vec::new();
+                for (hash, paths) in groups {
+                    let mut files = Vec::new();
+                    let mut total_size = 0u64;
+                    for (i, path) in paths.iter().enumerate() {
+                        if let Ok(Some(entry)) = db.get_file_by_path(path) {
+                            if i > 0 {
+                                total_size += entry.size_bytes;
+                            }
+                            files.push(entry);
+                        }
+                    }
+                    json_groups.push(serde_json::json!({
+                        "hash": hash,
+                        "files": files,
+                        "wasted_bytes": total_size,
+                    }));
+                }
+                let json = serde_json::to_string(&json_groups).unwrap_or_else(|_| "[]".into());
+                cstring_or_empty(&json)
+            }
+            Err(e) => json_err(&e.to_string()),
+        },
+        None => json_err("Engine not initialized"),
+    }
+}
+
+/// Get groups of perceptually similar images as JSON.
+#[no_mangle]
+pub extern "C" fn memoryos_get_similar_groups() -> *mut c_char {
+    let guard = DB.lock().unwrap();
+    match guard.as_ref() {
+        Some(db) => {
+            let all_files = match db.list_files(1000, 0) {
+                Ok(f) => f,
+                Err(e) => return json_err(&e.to_string()),
+            };
+
+            let image_files: Vec<&FileEntry> =
+                all_files.iter().filter(|f| f.phash.is_some()).collect();
+
+            let mut groups = Vec::new();
+            let mut visited = std::collections::HashSet::new();
+
+            for (i, f_a) in image_files.iter().enumerate() {
+                if visited.contains(&f_a.id) {
+                    continue;
+                }
+
+                let phash_a: u64 = f_a.phash.as_ref().unwrap().parse().unwrap_or(0);
+                let mut group_files = vec![(*f_a).clone()];
+
+                for f_b in image_files.iter().skip(i + 1) {
+                    if visited.contains(&f_b.id) {
+                        continue;
+                    }
+
+                    let phash_b: u64 = f_b.phash.as_ref().unwrap().parse().unwrap_or(0);
+                    let distance = duplicate_engine::hamming_distance(phash_a, phash_b);
+
+                    if distance <= 10 {
+                        group_files.push((*f_b).clone());
+                        visited.insert(f_b.id);
+                    }
+                }
+
+                if group_files.len() > 1 {
+                    visited.insert(f_a.id);
+                    groups.push(serde_json::json!({
+                        "files": group_files,
+                        "similarity": 0.85,
+                    }));
+                }
+            }
+
+            let json = serde_json::to_string(&groups).unwrap_or_else(|_| "[]".into());
+            cstring_or_empty(&json)
+        }
+        None => json_err("Engine not initialized"),
     }
 }

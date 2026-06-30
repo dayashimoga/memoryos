@@ -574,6 +574,40 @@ class RustFfi {
     }
   }
 
+  // ── Duplicates & Similar ───────────────────────────────────────────
+
+  /// Get groups of duplicate files as JSON.
+  static String getDuplicateGroups() {
+    if (!isAvailable) return '[]';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(),
+          Pointer<Utf8> Function()>('memoryos_get_duplicate_groups');
+      final ptr = func();
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    }
+  }
+
+  /// Get groups of perceptually similar images as JSON.
+  static String getSimilarGroups() {
+    if (!isAvailable) return '[]';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(),
+          Pointer<Utf8> Function()>('memoryos_get_similar_groups');
+      final ptr = func();
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    }
+  }
+
   // ── Recent files ───────────────────────────────────────────────────
 
   /// Get recently modified files as JSON array.

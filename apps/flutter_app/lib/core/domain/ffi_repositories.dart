@@ -8,7 +8,7 @@ class FfiFileRepository implements FileRepository {
 
   const FfiFileRepository();
 
-  FileEntry _parseFileEntry(Map<String, dynamic> map) {
+  static FileEntry parseFileEntry(Map<String, dynamic> map) {
     return FileEntry(
       id: map['id'] ?? '',
       path: map['path'] ?? '',
@@ -33,7 +33,7 @@ class FfiFileRepository implements FileRepository {
     try {
       final jsonStr = RustFfi.listFiles(limit, offset);
       final List decoded = jsonDecode(jsonStr);
-      return decoded.map((item) => _parseFileEntry(item)).toList();
+      return decoded.map((item) => parseFileEntry(item)).toList();
     } catch (_) {
       return [];
     }
@@ -56,7 +56,7 @@ class FfiFileRepository implements FileRepository {
             final fileId = item['file_id'] ?? '';
             final fileJson = RustFfi.getFile(fileId);
             if (fileJson == 'null') return null;
-            return _parseFileEntry(jsonDecode(fileJson));
+            return parseFileEntry(jsonDecode(fileJson));
           })
           .whereType<FileEntry>()
           .toList();
@@ -87,7 +87,7 @@ class FfiFileRepository implements FileRepository {
     try {
       final jsonStr = RustFfi.getFile(id);
       if (jsonStr == 'null') return null;
-      return _parseFileEntry(jsonDecode(jsonStr));
+      return parseFileEntry(jsonDecode(jsonStr));
     } catch (_) {
       return null;
     }
@@ -133,7 +133,7 @@ class FfiFileRepository implements FileRepository {
     try {
       final jsonStr = RustFfi.getLargeFiles(minSizeMb);
       final List decoded = jsonDecode(jsonStr);
-      return decoded.map((item) => _parseFileEntry(item)).toList();
+      return decoded.map((item) => parseFileEntry(item)).toList();
     } catch (_) {
       return [];
     }
@@ -412,12 +412,43 @@ class FfiStorageRepository implements StorageRepository {
   }
 
   @override
-  Future<List<DuplicateGroup>> getDuplicateGroups() async =>
-      _fallback.getDuplicateGroups();
+  Future<List<DuplicateGroup>> getDuplicateGroups() async {
+    if (!RustFfi.isAvailable) return _fallback.getDuplicateGroups();
+    try {
+      final jsonStr = RustFfi.getDuplicateGroups();
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((group) {
+        final List filesList = group['files'] ?? [];
+        final files = filesList.map((f) => FfiFileRepository.parseFileEntry(f)).toList();
+        return DuplicateGroup(
+          hash: group['hash'] ?? '',
+          files: files,
+          wastedBytes: group['wasted_bytes'] ?? 0,
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
-  Future<List<SimilarGroup>> getSimilarImageGroups() async =>
-      _fallback.getSimilarImageGroups();
+  Future<List<SimilarGroup>> getSimilarImageGroups() async {
+    if (!RustFfi.isAvailable) return _fallback.getSimilarImageGroups();
+    try {
+      final jsonStr = RustFfi.getSimilarGroups();
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((group) {
+        final List filesList = group['files'] ?? [];
+        final files = filesList.map((f) => FfiFileRepository.parseFileEntry(f)).toList();
+        return SimilarGroup(
+          files: files,
+          similarity: group['similarity'] ?? 0.85,
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
   Future<StorageHeatmap> getHeatmap() async => _fallback.getHeatmap();

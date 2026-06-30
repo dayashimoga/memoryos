@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:memoryos/core/di/service_locator.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
@@ -351,9 +352,9 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'High-Fidelity Document Conversion'),
           const SizedBox(height: 16),
-          _buildTextField('Input File Path', _docInputController),
+          _buildTextField('Input File Path', _docInputController, isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Output File Path', _docOutputController),
+          _buildTextField('Output File Path', _docOutputController, isFilePicker: true),
           const SizedBox(height: 16),
           const Text('Conversion Preset',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -412,9 +413,9 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'Offline Image Converter & Resizer'),
           const SizedBox(height: 16),
-          _buildTextField('Input Image Path', _imgInputController),
+          _buildTextField('Input Image Path', _imgInputController, isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Output Image Path', _imgOutputController),
+          _buildTextField('Output Image Path', _imgOutputController, isFilePicker: true),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -512,9 +513,9 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'Offline Video & Audio Utility Kit'),
           const SizedBox(height: 16),
-          _buildTextField('Input File (WAV/MP3/MP4)', _mediaInputController),
+          _buildTextField('Input File (WAV/MP3/MP4)', _mediaInputController, isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Output File', _mediaOutputController),
+          _buildTextField('Output File', _mediaOutputController, isFilePicker: true),
           const SizedBox(height: 16),
           CheckboxListTile(
             value: _audioNormalise,
@@ -583,9 +584,9 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'Archive Toolkit & Password Encryption'),
           const SizedBox(height: 16),
-          _buildTextField('Archive Path (.zip)', _archiveInputController),
+          _buildTextField('Archive Path (.zip)', _archiveInputController, isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Extraction Target Folder', _archiveOutputController),
+          _buildTextField('Extraction Target Folder', _archiveOutputController, isFilePicker: true),
           const SizedBox(height: 12),
           _buildTextField(
               'Archive Password / Key (Optional)', _archivePasswordController,
@@ -694,7 +695,7 @@ class _ToolboxPageState extends State<ToolboxPage>
           const SizedBox(height: 24),
           const SectionHeader(title: 'AES-256-GCM Encrypted Backups'),
           const SizedBox(height: 12),
-          _buildTextField('Backup File Target Path', _backupPathController),
+          _buildTextField('Backup File Target Path', _backupPathController, isFilePicker: true),
           const SizedBox(height: 12),
           _buildTextField(
               'Backup Key Phrase / Password', _backupKeyPhraseController,
@@ -735,7 +736,7 @@ class _ToolboxPageState extends State<ToolboxPage>
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {bool obscure = false}) {
+      {bool obscure = false, bool isFilePicker = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -750,6 +751,23 @@ class _ToolboxPageState extends State<ToolboxPage>
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            suffixIcon: isFilePicker
+                ? IconButton(
+                    icon: const Icon(Icons.file_open_rounded, size: 18),
+                    onPressed: () async {
+                      try {
+                        final result = await FilePicker.platform.pickFiles(
+                          allowMultiple: false,
+                        );
+                        if (result != null && result.files.single.path != null) {
+                          controller.text = result.files.single.path!;
+                        }
+                      } catch (e) {
+                        _showStatus('Failed to select file: $e', isError: true);
+                      }
+                    },
+                  )
+                : null,
           ),
         ),
       ],
