@@ -26,10 +26,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgstreamer1.0-dev \
     libgstreamer-plugins-base1.0-dev \
     python3 \
+    mingw-w64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Rust tools
 RUN rustup component add rustfmt clippy
+RUN rustup target add x86_64-pc-windows-gnu
 RUN cargo install cargo-tarpaulin --locked || true
 
 # Flutter SDK

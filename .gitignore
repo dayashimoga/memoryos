@@ -63,3 +63,4 @@ tarpaulin-report.html
 memoryos_data/
 /artifacts/
 /data/
+/target-dist/

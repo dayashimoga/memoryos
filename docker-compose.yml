@@ -26,6 +26,19 @@ services:
     networks:
       - memoryos
 
+  # ─── Rust Build (Windows cross-compilation) ─────────────────────────────────
+  rust-build-windows:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes: *rust-volumes
+    environment: *rust-env
+    working_dir: /workspace
+    command: cargo build --workspace --release --target x86_64-pc-windows-gnu
+    networks:
+      - memoryos
+
   # ─── Rust Check (fast lint/typecheck) ───────────────────────────────────────
   rust-check:
     build:
