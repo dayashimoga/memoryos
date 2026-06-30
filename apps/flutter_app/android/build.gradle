@@ -15,27 +15,35 @@ subprojects {
 }
 
 subprojects {
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            if (project.android.namespace == null) {
+    def configureProject = { proj ->
+        if (proj.hasProperty("android")) {
+            if (proj.android.namespace == null) {
                 try {
-                    def manifestFile = project.file("src/main/AndroidManifest.xml")
+                    def manifestFile = proj.file("src/main/AndroidManifest.xml")
                     if (manifestFile.exists()) {
                         def parser = new XmlParser()
                         def manifest = parser.parse(manifestFile)
                         def pkg = manifest.attribute("package")
                         if (pkg != null) {
-                            project.android.namespace = pkg
+                            proj.android.namespace = pkg
                         } else {
-                            project.android.namespace = project.group
+                            proj.android.namespace = proj.group
                         }
                     } else {
-                        project.android.namespace = project.group
+                        proj.android.namespace = proj.group
                     }
                 } catch (Exception e) {
-                    project.android.namespace = project.group
+                    proj.android.namespace = proj.group
                 }
             }
+        }
+    }
+    
+    if (project.state.executed) {
+        configureProject(project)
+    } else {
+        project.afterEvaluate {
+            configureProject(project)
         }
     }
 }
