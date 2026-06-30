@@ -140,16 +140,22 @@ services:
         flutter pub get &&
         flutter test --coverage --reporter=expanded &&
         echo '=== Coverage gate ===' &&
-        LINES_HIT=$$(grep -oP 'LH:\K\d+' coverage/lcov.info | awk '{s+=$$1}END{print s}') &&
-        LINES_FOUND=$$(grep -oP 'LF:\K\d+' coverage/lcov.info | awk '{s+=$$1}END{print s}') &&
-        if [ \"$$LINES_FOUND\" -gt 0 ]; then
-          python3 -c \"
-          hit=int('$$LINES_HIT'); found=int('$$LINES_FOUND')
-          pct=hit*100/found if found>0 else 0
-          print(f'Flutter coverage: {pct:.1f}%')
-          import sys; sys.exit(0 if pct>=65 else 1)
-          \"
-        fi
+        LINES_HIT=$$(grep -oP 'LH:\K\d+' coverage/lcov.info 2>/dev/null | awk '{s+=$$1}END{print s+0}') &&
+        LINES_FOUND=$$(grep -oP 'LF:\K\d+' coverage/lcov.info 2>/dev/null | awk '{s+=$$1}END{print s+0}') &&
+        python3 -c \"
+hit=int('$${LINES_HIT:-0}')
+found=int('$${LINES_FOUND:-0}')
+if found > 0:
+    pct = hit * 100.0 / found
+    print(f'Flutter coverage: {pct:.1f}% ({hit}/{found} lines)')
+    import sys
+    if pct < 65.0:
+        print(f'FAIL: coverage {pct:.1f}% is below 65% threshold')
+        sys.exit(1)
+    print('PASS: coverage meets 65% threshold')
+else:
+    print('No coverage data — skipping gate')
+\"
       "
     networks:
       - memoryos
@@ -200,16 +206,98 @@ services:
       dockerfile: docker/builder/Dockerfile
     image: memoryos-builder:latest
     volumes:
-      - ./apps/flutter_app:/flutter_app
-      - flutter-pub-cache:/root/.pub-cache
       - .:/workspace
+      - flutter-pub-cache:/root/.pub-cache
+      - cargo-cache:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
       - target-cache:/workspace/target
-    working_dir: /flutter_app
+    environment: *rust-env
+    working_dir: /workspace
     command: >
       bash -c "
+        echo '[Build] Compiling Rust core-engine for Linux...' &&
+        cargo build --workspace --release &&
+        echo '[Build] Building Flutter Linux app...' &&
+        cd apps/flutter_app &&
+        flutter config --enable-linux-desktop &&
         flutter pub get &&
         flutter build linux --release &&
-        echo 'Linux build complete: apps/flutter_app/build/linux/'
+        echo '[Build] Copying Rust .so into Flutter bundle...' &&
+        mkdir -p build/linux/x64/release/bundle/lib &&
+        cp /workspace/target/release/libcore_engine.so build/linux/x64/release/bundle/lib/ &&
+        echo '[OK] Linux build complete:' &&
+        ls -lh build/linux/x64/release/bundle/
+      "
+    networks:
+      - memoryos
+
+  # ─── Flutter Android Build (production) ──────────────────────────────────────
+  flutter-build-android:
+    build:
+      context: .
+      dockerfile: docker/android/Dockerfile
+    image: memoryos-android:latest
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target-cache:/workspace/target
+      - flutter-pub-cache:/root/.pub-cache
+    working_dir: /workspace
+    command: >
+      bash -c "
+        echo '[Build] Compiling Rust core-engine for all Android ABI targets...' &&
+        cargo ndk \
+          --platform 23 \
+          --target aarch64-linux-android \
+          --target armv7-linux-androideabi \
+          --target x86_64-linux-android \
+          --target i686-linux-android \
+          -o apps/flutter_app/android/app/src/main/jniLibs \
+          build --release -p core-engine &&
+        echo '[Build] jniLibs contents:' &&
+        find apps/flutter_app/android/app/src/main/jniLibs -name '*.so' &&
+        echo '[Build] Building Flutter Android APK...' &&
+        cd apps/flutter_app &&
+        flutter pub get &&
+        flutter build apk --release &&
+        flutter build appbundle --release &&
+        mkdir -p /workspace/artifacts/android &&
+        cp build/app/outputs/flutter-apk/app-release.apk /workspace/artifacts/android/memoryos-release.apk &&
+        cp build/app/outputs/bundle/release/app-release.aab /workspace/artifacts/android/memoryos-release.aab &&
+        echo '[OK] Android build complete:' &&
+        ls -lh /workspace/artifacts/android/
+      "
+    networks:
+      - memoryos
+
+  # ─── Flutter Windows DLL Build (cross-compilation via Docker) ────────────────
+  # NOTE: This service cross-compiles ONLY the Rust core_engine.dll for Windows.
+  # The Flutter Windows .exe must be built on a Windows host machine (see build_docker.ps1).
+  # Docker cannot run flutter build windows --release on Linux (requires MSVC).
+  flutter-build-windows-dll:
+    build:
+      context: .
+      dockerfile: docker/builder/Dockerfile
+    image: memoryos-builder:latest
+    volumes:
+      - .:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target-cache:/workspace/target
+    environment:
+      <<: *rust-env
+      CARGO_TARGET_X86_64_PC_WINDOWS_GNU_LINKER: x86_64-w64-mingw32-gcc
+    working_dir: /workspace
+    command: >
+      bash -c "
+        echo '[Build] Cross-compiling Rust core-engine.dll for Windows (x86_64-pc-windows-gnu)...' &&
+        cargo build --workspace --release --target x86_64-pc-windows-gnu &&
+        mkdir -p /workspace/artifacts/windows &&
+        cp target/x86_64-pc-windows-gnu/release/core_engine.dll /workspace/artifacts/windows/ 2>/dev/null || \
+        find target/x86_64-pc-windows-gnu/release -name '*.dll' -exec cp {} /workspace/artifacts/windows/ \; &&
+        echo '[OK] Windows DLL build complete:' &&
+        ls -lh /workspace/artifacts/windows/
       "
     networks:
       - memoryos

@@ -36,20 +36,8 @@ Write-Host "✅ Build complete!" -ForegroundColor Green
 # MemoryOS Cross-Platform Build Automation
 [CmdletBinding()]
 param()
-Write-Host "📦 Compiling cross-platform targets..." -ForegroundColor Cyan
-docker compose run --rm rust-build
-docker compose run --rm flutter-build-web
-docker compose run --rm flutter-build-linux
-
-# iOS conditional check
-if ($IsMacOS -or $env:OS -like "*Darwin*") {
-    Write-Host "🍎 macOS environment detected. Compiling iOS unsigned archive..." -ForegroundColor Cyan
-    # Shell out to local xcode builds if available
-    Write-Host "✅ iOS targets built." -ForegroundColor Green
-} else {
-    Write-Host "ℹ️ Non-macOS environment. Skipping native iOS packaging." -ForegroundColor Yellow
-}
-Write-Host "✅ Cross-platform builds complete." -ForegroundColor Green
+Write-Host "📦 Starting full cross-platform builds..." -ForegroundColor Cyan
+& "$PSScriptRoot/../scripts/build_docker.ps1"
 """,
         'test.ps1': """
 # MemoryOS Test Automation
@@ -144,10 +132,9 @@ Write-Host "✅ Smoke tests passed!" -ForegroundColor Green
 # MemoryOS Packaging Engine
 [CmdletBinding()]
 param()
-Write-Host "🤖 Packaging android APK/AAB distribution binaries..." -ForegroundColor Cyan
-# Run target android compiles inside containers
-docker compose run --rm flutter-build-web
-Write-Host "✅ Artifacts saved under artifacts/android/" -ForegroundColor Green
+Write-Host "🤖 Packaging android APK/AAB distribution binaries via Docker..." -ForegroundColor Cyan
+docker compose run --rm flutter-build-android
+Write-Host "✅ Android distribution artifacts compiled and saved under artifacts/android/" -ForegroundColor Green
 """,
         'release.ps1': """
 # MemoryOS Release Packaging Orchestration

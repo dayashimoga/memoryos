@@ -4,6 +4,8 @@ import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/domain/ffi_repositories.dart';
 import 'package:memoryos/core/ffi/rust_ffi.dart';
 import 'package:memoryos/features/settings/bloc/settings_bloc.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// Production service locator for MemoryOS.
 ///
@@ -47,6 +49,24 @@ class ServiceLocator {
 
     // Load Rust FFI Dynamic Library
     RustFfi.initialize();
+
+    // Initialize the Rust engine with a writable data directory.
+    // This opens the SQLite database and sets up all internal state.
+    if (RustFfi.isAvailable && !kIsWeb) {
+      try {
+        final dir = await getApplicationDocumentsDirectory();
+        final dataDir = '${dir.path}/memoryos';
+        final initResult = RustFfi.init(dataDir);
+        if (initResult != 0) {
+          // Non-zero means the engine reported an error; log but continue with stub fallback
+          // ignore: avoid_print
+          print('[MemoryOS] RustFfi.init returned $initResult for "$dataDir"');
+        }
+      } catch (e) {
+        // ignore: avoid_print
+        print('[MemoryOS] Failed to initialize Rust engine data dir: $e');
+      }
+    }
 
     // Repositories (stubs unless overridden, fallback internally checks availability)
     _fileRepo = fileRepo ?? const FfiFileRepository();
