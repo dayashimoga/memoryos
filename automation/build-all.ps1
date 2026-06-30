@@ -2,4 +2,4 @@
 [CmdletBinding()]
 param()
 Write-Host "📦 Starting full cross-platform builds..." -ForegroundColor Cyan
-& "$PSScriptRoot/../scripts/build_docker.ps1"
+& "$PSScriptRoot/../scripts/build_all.ps1"

@@ -37,7 +37,7 @@ Write-Host "✅ Build complete!" -ForegroundColor Green
 [CmdletBinding()]
 param()
 Write-Host "📦 Starting full cross-platform builds..." -ForegroundColor Cyan
-& "$PSScriptRoot/../scripts/build_docker.ps1"
+& "$PSScriptRoot/../scripts/build_all.ps1"
 """,
         'test.ps1': """
 # MemoryOS Test Automation
