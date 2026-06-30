@@ -183,7 +183,7 @@ jobs:
         include:
           - os: ubuntu-latest
             target: linux
-          - os: windows-latest
+          - os: windows-2019
             target: windows
           - os: macos-latest
             target: macos
@@ -213,8 +213,6 @@ jobs:
       - name: Bootstrap Flutter platforms
         working-directory: apps/flutter_app
         run: flutter create --platforms=${{ matrix.target }} .
-        env:
-          CMAKE_GENERATOR: "Visual Studio 17 2022"
 
       - name: Flutter pub get
         working-directory: apps/flutter_app
@@ -232,8 +230,6 @@ jobs:
         if: matrix.target == 'windows'
         working-directory: apps/flutter_app
         run: flutter build windows --release
-        env:
-          CMAKE_GENERATOR: "Visual Studio 17 2022"
 
       - name: Build Flutter (macOS)
         if: matrix.target == 'macos'
