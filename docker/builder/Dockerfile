@@ -33,12 +33,12 @@ RUN rustup component add rustfmt clippy
 RUN cargo install cargo-tarpaulin --locked || true
 
 # Flutter SDK
-ENV FLUTTER_VERSION=3.22.2
+ENV FLUTTER_VERSION=3.24.3
 ENV FLUTTER_HOME=/flutter
 ENV PATH="${FLUTTER_HOME}/bin:${PATH}"
 
 RUN git clone https://github.com/flutter/flutter.git ${FLUTTER_HOME} \
-    --branch stable \
+    --branch 3.24.3 \
     --single-branch \
     --depth 1 && \
     flutter config --no-analytics && \
