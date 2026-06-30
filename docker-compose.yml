@@ -236,14 +236,7 @@ services:
     command: >
       bash -c "
         echo '[Build] Compiling Rust core-engine for all Android ABI targets...' &&
-        cargo ndk \
-          --platform 23 \
-          --target aarch64-linux-android \
-          --target armv7-linux-androideabi \
-          --target x86_64-linux-android \
-          --target i686-linux-android \
-          -o apps/flutter_app/android/app/src/main/jniLibs \
-          build --release -p core-engine &&
+        cargo ndk --platform 23 --target aarch64-linux-android --target armv7-linux-androideabi --target x86_64-linux-android --target i686-linux-android -o apps/flutter_app/android/app/src/main/jniLibs build --release -p memoryos-core-engine &&
         echo '[Build] jniLibs contents:' &&
         find apps/flutter_app/android/app/src/main/jniLibs -name '*.so' &&
         echo '[Build] Building Flutter Android APK...' &&

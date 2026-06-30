@@ -344,6 +344,7 @@ jobs:
       - name: Build Rust core-engine for Android (all ABIs)
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
         run: |
           cargo ndk \
             --platform 23 \
@@ -352,7 +353,7 @@ jobs:
             --target x86_64-linux-android \
             --target i686-linux-android \
             -o apps/flutter_app/android/app/src/main/jniLibs \
-            build --release -p core-engine
+            build --release -p memoryos-core-engine
           echo "jniLibs contents:"
           find apps/flutter_app/android/app/src/main/jniLibs -name "*.so"
 

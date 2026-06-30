@@ -574,8 +574,8 @@ function Build-macOS {
         # Build Rust dylib
         Write-Info "Compiling Rust core-engine for macOS (universal binary)..."
         rustup target add aarch64-apple-darwin x86_64-apple-darwin 2>&1 | Out-Null
-        cargo build -p core-engine --release --target aarch64-apple-darwin 2>&1 | Out-Null
-        cargo build -p core-engine --release --target x86_64-apple-darwin  2>&1 | Out-Null
+        cargo build -p memoryos-core-engine --release --target aarch64-apple-darwin 2>&1 | Out-Null
+        cargo build -p memoryos-core-engine --release --target x86_64-apple-darwin  2>&1 | Out-Null
 
         # Lipo to universal
         $armLib = "target/aarch64-apple-darwin/release/libcore_engine.dylib"
@@ -652,7 +652,7 @@ function Build-iOS {
         rustup target add aarch64-apple-ios aarch64-apple-ios-sim 2>&1 | Out-Null
 
         Write-Info "Compiling Rust core-engine for iOS (arm64)..."
-        cargo build -p core-engine --release --target aarch64-apple-ios 2>&1 | Out-Null
+        cargo build -p memoryos-core-engine --release --target aarch64-apple-ios 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) { throw "Rust iOS build failed" }
 
         # Flutter iOS
