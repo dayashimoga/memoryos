@@ -9,7 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  FLUTTER_VERSION: "3.24.0"
+  FLUTTER_VERSION: "stable"
 
 jobs:
   # ─── Rust Tests ─────────────────────────────────────────────────────────────
@@ -211,6 +211,12 @@ jobs:
       - name: Build Rust crates
         run: cargo build --workspace --release
 
+      - name: Install Linux build dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
       - name: Build Flutter (Linux)
         if: matrix.target == 'linux'
         working-directory: apps/flutter_app
@@ -303,16 +309,16 @@ jobs:
         working-directory: apps/flutter_app
         run: flutter pub get
 
-      - name: Build iOS IPA
+      - name: Build iOS App
         working-directory: apps/flutter_app
-        run: flutter build ipa --release --no-codesign
+        run: flutter build ios --release --no-codesign
 
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: memoryos-ios
           path: |
-            apps/flutter_app/build/ios/ipa/*.ipa
+            apps/flutter_app/build/ios/iphoneos/Runner.app
 
   # ─── Release Quality Reports ────────────────────────────────────────────────
   release-engineering:
