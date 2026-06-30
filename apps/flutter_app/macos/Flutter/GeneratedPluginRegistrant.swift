@@ -1,0 +1,30 @@
+//
+//  Generated file. Do not edit.
+//
+
+import FlutterMacOS
+import Foundation
+
+import connectivity_plus
+import device_info_plus
+import dynamic_color
+import file_selector_macos
+import flutter_local_notifications
+import irondash_engine_context
+import local_auth_darwin
+import share_plus
+import sqflite_darwin
+import super_native_extensions
+
+func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
+  ConnectivityPlugin.register(with: registry.registrar(forPlugin: "ConnectivityPlugin"))
+  DeviceInfoPlusMacosPlugin.register(with: registry.registrar(forPlugin: "DeviceInfoPlusMacosPlugin"))
+  DynamicColorPlugin.register(with: registry.registrar(forPlugin: "DynamicColorPlugin"))
+  FileSelectorPlugin.register(with: registry.registrar(forPlugin: "FileSelectorPlugin"))
+  FlutterLocalNotificationsPlugin.register(with: registry.registrar(forPlugin: "FlutterLocalNotificationsPlugin"))
+  IrondashEngineContextPlugin.register(with: registry.registrar(forPlugin: "IrondashEngineContextPlugin"))
+  LocalAuthPlugin.register(with: registry.registrar(forPlugin: "LocalAuthPlugin"))
+  SharePlusMacosPlugin.register(with: registry.registrar(forPlugin: "SharePlusMacosPlugin"))
+  SqflitePlugin.register(with: registry.registrar(forPlugin: "SqflitePlugin"))
+  SuperNativeExtensionsPlugin.register(with: registry.registrar(forPlugin: "SuperNativeExtensionsPlugin"))
+}
