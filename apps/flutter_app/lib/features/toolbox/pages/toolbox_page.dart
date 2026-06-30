@@ -352,9 +352,11 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'High-Fidelity Document Conversion'),
           const SizedBox(height: 16),
-          _buildTextField('Input File Path', _docInputController, isFilePicker: true),
+          _buildTextField('Input File Path', _docInputController,
+              isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Output File Path', _docOutputController, isFilePicker: true),
+          _buildTextField('Output File Path', _docOutputController,
+              isFilePicker: true),
           const SizedBox(height: 16),
           const Text('Conversion Preset',
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
@@ -413,9 +415,11 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'Offline Image Converter & Resizer'),
           const SizedBox(height: 16),
-          _buildTextField('Input Image Path', _imgInputController, isFilePicker: true),
+          _buildTextField('Input Image Path', _imgInputController,
+              isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Output Image Path', _imgOutputController, isFilePicker: true),
+          _buildTextField('Output Image Path', _imgOutputController,
+              isFilePicker: true),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -513,9 +517,11 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'Offline Video & Audio Utility Kit'),
           const SizedBox(height: 16),
-          _buildTextField('Input File (WAV/MP3/MP4)', _mediaInputController, isFilePicker: true),
+          _buildTextField('Input File (WAV/MP3/MP4)', _mediaInputController,
+              isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Output File', _mediaOutputController, isFilePicker: true),
+          _buildTextField('Output File', _mediaOutputController,
+              isFilePicker: true),
           const SizedBox(height: 16),
           CheckboxListTile(
             value: _audioNormalise,
@@ -584,9 +590,11 @@ class _ToolboxPageState extends State<ToolboxPage>
         children: [
           const SectionHeader(title: 'Archive Toolkit & Password Encryption'),
           const SizedBox(height: 16),
-          _buildTextField('Archive Path (.zip)', _archiveInputController, isFilePicker: true),
+          _buildTextField('Archive Path (.zip)', _archiveInputController,
+              isFilePicker: true),
           const SizedBox(height: 12),
-          _buildTextField('Extraction Target Folder', _archiveOutputController, isFilePicker: true),
+          _buildTextField('Extraction Target Folder', _archiveOutputController,
+              isFilePicker: true),
           const SizedBox(height: 12),
           _buildTextField(
               'Archive Password / Key (Optional)', _archivePasswordController,
@@ -695,7 +703,8 @@ class _ToolboxPageState extends State<ToolboxPage>
           const SizedBox(height: 24),
           const SectionHeader(title: 'AES-256-GCM Encrypted Backups'),
           const SizedBox(height: 12),
-          _buildTextField('Backup File Target Path', _backupPathController, isFilePicker: true),
+          _buildTextField('Backup File Target Path', _backupPathController,
+              isFilePicker: true),
           const SizedBox(height: 12),
           _buildTextField(
               'Backup Key Phrase / Password', _backupKeyPhraseController,
@@ -759,7 +768,8 @@ class _ToolboxPageState extends State<ToolboxPage>
                         final result = await FilePicker.platform.pickFiles(
                           allowMultiple: false,
                         );
-                        if (result != null && result.files.single.path != null) {
+                        if (result != null &&
+                            result.files.single.path != null) {
                           controller.text = result.files.single.path!;
                         }
                       } catch (e) {

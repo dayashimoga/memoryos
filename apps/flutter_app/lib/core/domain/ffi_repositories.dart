@@ -419,7 +419,8 @@ class FfiStorageRepository implements StorageRepository {
       final List decoded = jsonDecode(jsonStr);
       return decoded.map((group) {
         final List filesList = group['files'] ?? [];
-        final files = filesList.map((f) => FfiFileRepository.parseFileEntry(f)).toList();
+        final files =
+            filesList.map((f) => FfiFileRepository.parseFileEntry(f)).toList();
         return DuplicateGroup(
           hash: group['hash'] ?? '',
           files: files,
@@ -439,7 +440,8 @@ class FfiStorageRepository implements StorageRepository {
       final List decoded = jsonDecode(jsonStr);
       return decoded.map((group) {
         final List filesList = group['files'] ?? [];
-        final files = filesList.map((f) => FfiFileRepository.parseFileEntry(f)).toList();
+        final files =
+            filesList.map((f) => FfiFileRepository.parseFileEntry(f)).toList();
         return SimilarGroup(
           files: files,
           similarity: group['similarity'] ?? 0.85,

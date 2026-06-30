@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -807,40 +807,45 @@ class _ImportSheet extends StatelessWidget {
   ];
 
   Future<void> _handleImport(BuildContext context, String optionName) async {
+    final homeBloc = context.read<HomeBloc>();
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context); // Dismiss sheet first
     try {
       if (optionName == 'Photo Library') {
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.media,
+        final result = await fp.FilePicker.platform.pickFiles(
+          type: fp.FileType.media,
           allowMultiple: false,
         );
         if (result != null && result.files.single.path != null) {
           final path = result.files.single.path!;
-          context.read<HomeBloc>().add(HomeFileImported(path));
+          homeBloc.add(HomeFileImported(path));
         }
-      } else if (optionName == 'Files & Folders' || optionName == 'Screenshots Folder') {
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.any,
+      } else if (optionName == 'Files & Folders' ||
+          optionName == 'Screenshots Folder') {
+        final result = await fp.FilePicker.platform.pickFiles(
+          type: fp.FileType.any,
           allowMultiple: false,
         );
         if (result != null && result.files.single.path != null) {
           final path = result.files.single.path!;
-          context.read<HomeBloc>().add(HomeFileImported(path));
+          homeBloc.add(HomeFileImported(path));
         }
       } else if (optionName == 'Voice Note') {
-        final result = await FilePicker.platform.pickFiles(
-          type: FileType.audio,
+        final result = await fp.FilePicker.platform.pickFiles(
+          type: fp.FileType.audio,
           allowMultiple: false,
         );
         if (result != null && result.files.single.path != null) {
           final path = result.files.single.path!;
-          context.read<HomeBloc>().add(HomeFileImported(path));
+          homeBloc.add(HomeFileImported(path));
         }
       } else if (optionName == 'URL / Web Page') {
-        _showUrlImportDialog(context);
+        if (context.mounted) {
+          _showUrlImportDialog(context);
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text('Failed to import: $e'),
           backgroundColor: DesignTokens.error,
