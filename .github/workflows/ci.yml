@@ -200,6 +200,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Bootstrap Flutter platforms
+        working-directory: apps/flutter_app
+        run: flutter create --platforms=android,ios,linux,macos,windows,web .
+
       - name: Flutter pub get
         working-directory: apps/flutter_app
         run: flutter pub get
@@ -253,6 +257,10 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Bootstrap Flutter platforms
+        working-directory: apps/flutter_app
+        run: flutter create --platforms=android,ios,linux,macos,windows,web .
+
       - name: Flutter pub get
         working-directory: apps/flutter_app
         run: flutter pub get
@@ -286,6 +294,10 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
+
+      - name: Bootstrap Flutter platforms
+        working-directory: apps/flutter_app
+        run: flutter create --platforms=android,ios,linux,macos,windows,web .
 
       - name: Flutter pub get
         working-directory: apps/flutter_app
