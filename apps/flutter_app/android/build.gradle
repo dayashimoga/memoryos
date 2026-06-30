@@ -1,0 +1,45 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir("../../build").get())
+
+subprojects {
+    project.layout.buildDirectory.value(rootProject.layout.buildDirectory.dir(project.name).get())
+}
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            if (project.android.namespace == null) {
+                try {
+                    def manifestFile = project.file("src/main/AndroidManifest.xml")
+                    if (manifestFile.exists()) {
+                        def parser = new XmlParser()
+                        def manifest = parser.parse(manifestFile)
+                        def pkg = manifest.attribute("package")
+                        if (pkg != null) {
+                            project.android.namespace = pkg
+                        } else {
+                            project.android.namespace = project.group
+                        }
+                    } else {
+                        project.android.namespace = project.group
+                    }
+                } catch (Exception e) {
+                    project.android.namespace = project.group
+                }
+            }
+        }
+    }
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.layout.buildDirectory
+}
