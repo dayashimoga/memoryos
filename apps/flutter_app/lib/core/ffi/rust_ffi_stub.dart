@@ -56,11 +56,11 @@ class RustFfi {
   static int archiveExtract(String path, String dest) => -1;
 
   // Toolbox — Encrypted backup
-  static int backupPerform(String dataDir, String backupPath,
-          String keyPhrase) =>
+  static int backupPerform(
+          String dataDir, String backupPath, String keyPhrase) =>
       -1;
-  static int backupRestore(String backupPath, String dataDir,
-          String keyPhrase) =>
+  static int backupRestore(
+          String backupPath, String dataDir, String keyPhrase) =>
       -1;
 
   // Storage analytics

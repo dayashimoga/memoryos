@@ -97,15 +97,14 @@ void main() {
     blocTest<HomeBloc, HomeState>(
       'emits error state when repository throws',
       build: () {
-        when(() => fileRepo.getStorageStats())
-            .thenThrow(Exception('DB error'));
+        when(() => fileRepo.getStorageStats()).thenThrow(Exception('DB error'));
         return HomeBloc(fileRepo);
       },
       act: (bloc) => bloc.add(HomeLoadRequested()),
       expect: () => [
         const HomeState(status: HomeStatus.loading),
-        predicate<HomeState>((s) =>
-            s.status == HomeStatus.error && s.error != null),
+        predicate<HomeState>(
+            (s) => s.status == HomeStatus.error && s.error != null),
       ],
     );
 
@@ -177,8 +176,8 @@ void main() {
         bloc.add(SearchCleared());
       },
       expect: () => [
-        predicate<SearchState>((s) =>
-            s.status == SearchStatus.idle && s.query.isEmpty),
+        predicate<SearchState>(
+            (s) => s.status == SearchStatus.idle && s.query.isEmpty),
       ],
     );
 
@@ -214,21 +213,20 @@ void main() {
 
     setUp(() {
       storageRepo = MockStorageRepository();
-      when(() => storageRepo.analyzeStorage()).thenAnswer((_) async =>
-          const StorageAnalysis(
-            totalBytes: 200 * 1024 * 1024,
-            duplicateBytes: 50 * 1024 * 1024,
-            blurryCount: 3,
-            emptyScreenshotCount: 1,
-            largeFileCount: 2,
-            recoverableBytes: 60 * 1024 * 1024,
-          ));
+      when(() => storageRepo.analyzeStorage())
+          .thenAnswer((_) async => const StorageAnalysis(
+                totalBytes: 200 * 1024 * 1024,
+                duplicateBytes: 50 * 1024 * 1024,
+                blurryCount: 3,
+                emptyScreenshotCount: 1,
+                largeFileCount: 2,
+                recoverableBytes: 60 * 1024 * 1024,
+              ));
       when(() => storageRepo.getDuplicateGroups()).thenAnswer((_) async => []);
       when(() => storageRepo.getSimilarImageGroups())
           .thenAnswer((_) async => []);
       when(() => storageRepo.getHeatmap()).thenAnswer((_) async =>
-          const StorageHeatmap(
-              byExtension: {}, byMonth: {}, byCollection: {}));
+          const StorageHeatmap(byExtension: {}, byMonth: {}, byCollection: {}));
       when(() => storageRepo.safeDelete(any())).thenAnswer((_) async {});
       when(() => storageRepo.secureDelete(any())).thenAnswer((_) async {});
     });
@@ -248,8 +246,7 @@ void main() {
     blocTest<StorageBloc, StorageState>(
       'StorageDeleteRequested (safe) calls safeDelete',
       build: () => StorageBloc(storageRepo),
-      act: (bloc) =>
-          bloc.add(const StorageDeleteRequested(['f1', 'f2'])),
+      act: (bloc) => bloc.add(const StorageDeleteRequested(['f1', 'f2'])),
       verify: (_) {
         verify(() => storageRepo.safeDelete(['f1', 'f2'])).called(1);
       },
@@ -364,8 +361,7 @@ void main() {
       act: (bloc) => bloc.add(AiCheckModel()),
       expect: () => [
         predicate<AiState>((s) => s.status == AiStatus.checking),
-        predicate<AiState>(
-            (s) => s.status == AiStatus.ready && s.modelLoaded),
+        predicate<AiState>((s) => s.status == AiStatus.ready && s.modelLoaded),
       ],
     );
 
@@ -375,10 +371,11 @@ void main() {
       seed: () => const AiState(status: AiStatus.noModel),
       act: (bloc) => bloc.add(const AiSendMessage('Hi')),
       expect: () => [
+        predicate<AiState>(
+            (s) => s.status == AiStatus.thinking && s.messages.length == 1),
         predicate<AiState>((s) =>
-            s.status == AiStatus.thinking && s.messages.length == 1),
-        predicate<AiState>((s) =>
-            s.status == AiStatus.ready && s.messages.length == 2 &&
+            s.status == AiStatus.ready &&
+            s.messages.length == 2 &&
             s.messages.last.content == 'Hello! How can I help?'),
       ],
     );
@@ -401,8 +398,8 @@ void main() {
       act: (bloc) => bloc.add(const AiGenerateFlashcards('file-id')),
       expect: () => [
         predicate<AiState>((s) => s.status == AiStatus.thinking),
-        predicate<AiState>((s) =>
-            s.status == AiStatus.ready && s.flashcards.length == 1),
+        predicate<AiState>(
+            (s) => s.status == AiStatus.ready && s.flashcards.length == 1),
       ],
     );
 
@@ -422,8 +419,7 @@ void main() {
     blocTest<AiBloc, AiState>(
       'AiExplainFile (code mode) emits summary',
       build: () => AiBloc(aiRepo),
-      act: (bloc) =>
-          bloc.add(const AiExplainFile('f1', AiExplainMode.code)),
+      act: (bloc) => bloc.add(const AiExplainFile('f1', AiExplainMode.code)),
       expect: () => [
         predicate<AiState>((s) => s.status == AiStatus.thinking),
         predicate<AiState>((s) =>
@@ -434,8 +430,7 @@ void main() {
     blocTest<AiBloc, AiState>(
       'AiExplainFile (diagram mode) emits summary',
       build: () => AiBloc(aiRepo),
-      act: (bloc) =>
-          bloc.add(const AiExplainFile('f1', AiExplainMode.diagram)),
+      act: (bloc) => bloc.add(const AiExplainFile('f1', AiExplainMode.diagram)),
       expect: () => [
         predicate<AiState>((s) => s.status == AiStatus.thinking),
         predicate<AiState>((s) =>
@@ -453,8 +448,7 @@ void main() {
       ),
       act: (bloc) => bloc.add(AiClearConversation()),
       expect: () => [
-        predicate<AiState>(
-            (s) => s.messages.isEmpty && s.flashcards.isEmpty),
+        predicate<AiState>((s) => s.messages.isEmpty && s.flashcards.isEmpty),
       ],
     );
   });
@@ -583,8 +577,7 @@ void main() {
     const repo = StubSearchRepository();
 
     test('search returns empty result', () async {
-      final result =
-          await repo.search(const SearchQuery(text: 'hello'));
+      final result = await repo.search(const SearchQuery(text: 'hello'));
       expect(result.isEmpty, isTrue);
       expect(result.total, 0);
       expect(result.query, 'hello');
@@ -661,12 +654,10 @@ void main() {
       await expectLater(repo.deleteCollection('id'), completes);
     });
     test('addFileToCollection completes', () async {
-      await expectLater(
-          repo.addFileToCollection('fid', 'cid'), completes);
+      await expectLater(repo.addFileToCollection('fid', 'cid'), completes);
     });
     test('removeFileFromCollection completes', () async {
-      await expectLater(
-          repo.removeFileFromCollection('fid', 'cid'), completes);
+      await expectLater(repo.removeFileFromCollection('fid', 'cid'), completes);
     });
   });
 
@@ -732,8 +723,8 @@ void main() {
 
   group('SearchResult', () {
     test('isEmpty is true when no hits', () {
-      final r = SearchResult(
-          hits: [], total: 0, elapsed: Duration.zero, query: 'x');
+      final r =
+          SearchResult(hits: [], total: 0, elapsed: Duration.zero, query: 'x');
       expect(r.isEmpty, isTrue);
     });
 

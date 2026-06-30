@@ -243,8 +243,7 @@ class _DetailsTab extends StatelessWidget {
               Expanded(
                 child: Text(
                   entry.path,
-                  style: const TextStyle(
-                      fontFamily: 'monospace', fontSize: 11),
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -608,7 +607,15 @@ class _FilePreviewPanel extends StatelessWidget {
   const _FilePreviewPanel({required this.entry});
 
   static const _imageExtensions = {
-    'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif', 'tiff'
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+    'webp',
+    'bmp',
+    'heic',
+    'heif',
+    'tiff'
   };
   static const _videoExtensions = {'mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v'};
   static const _audioExtensions = {'mp3', 'wav', 'm4a', 'flac', 'ogg', 'aac'};
@@ -664,8 +671,7 @@ class _FilePreviewPanel extends StatelessWidget {
                   if (result.type != ResultType.done && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text(
-                            'Cannot open file: ${result.message}'),
+                        content: Text('Cannot open file: ${result.message}'),
                         backgroundColor: DesignTokens.warning,
                       ),
                     );
@@ -673,8 +679,8 @@ class _FilePreviewPanel extends StatelessWidget {
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: DesignTokens.brand.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(20),
@@ -768,9 +774,7 @@ class _PreviewFallback extends StatelessWidget {
               fontFamily: 'Inter',
               fontWeight: FontWeight.w600,
               fontSize: 13,
-              color: isDark
-                  ? const Color(0xFF94A3B8)
-                  : const Color(0xFF475569),
+              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -781,9 +785,7 @@ class _PreviewFallback extends StatelessWidget {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 11,
-              color: isDark
-                  ? const Color(0xFF475569)
-                  : const Color(0xFF94A3B8),
+              color: isDark ? const Color(0xFF475569) : const Color(0xFF94A3B8),
             ),
           ),
         ],

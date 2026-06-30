@@ -286,7 +286,8 @@ class _OnboardingSlide extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                Icon(data.icon, color: Colors.white.withOpacity(0.15), size: 100),
+                Icon(data.icon,
+                    color: Colors.white.withOpacity(0.15), size: 100),
                 Icon(data.icon, color: Colors.white, size: 60),
               ],
             ),
@@ -302,15 +303,13 @@ class _OnboardingSlide extends StatelessWidget {
 
           // Emoji badge
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
               color: data.color.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: data.color.withOpacity(0.25)),
             ),
-            child: Text(data.emoji,
-                style: const TextStyle(fontSize: 18)),
+            child: Text(data.emoji, style: const TextStyle(fontSize: 18)),
           ).animate().fadeIn(delay: 200.ms),
 
           const SizedBox(height: 32),
@@ -324,8 +323,10 @@ class _OnboardingSlide extends StatelessWidget {
                   height: 1.2,
                 ),
             textAlign: TextAlign.center,
-          ).animate().fadeIn(delay: 250.ms, duration: 400.ms).slideY(
-                begin: 0.08, end: 0, delay: 250.ms, duration: 400.ms),
+          )
+              .animate()
+              .fadeIn(delay: 250.ms, duration: 400.ms)
+              .slideY(begin: 0.08, end: 0, delay: 250.ms, duration: 400.ms),
 
           const SizedBox(height: 16),
 

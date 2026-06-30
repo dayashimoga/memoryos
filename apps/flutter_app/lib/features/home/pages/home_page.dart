@@ -86,106 +86,106 @@ class _HomePageState extends State<HomePage> {
                   await Future.delayed(const Duration(milliseconds: 800));
                 },
                 color: DesignTokens.brand,
-          child: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              _HomeAppBar(),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ── Search / Command Bar ────────────────────
-                      _HeroSearchBar().animate().fadeIn(duration: 300.ms),
-                      const SizedBox(height: 20),
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    _HomeAppBar(),
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ── Search / Command Bar ────────────────────
+                            _HeroSearchBar().animate().fadeIn(duration: 300.ms),
+                            const SizedBox(height: 20),
 
-                      // ── Motto Hero Banner (shown on first launch / no files) ──
-                      if (state.stats.totalFiles == 0 &&
-                          state.status != HomeStatus.loading)
-                        _MottoHeroBanner().animate().fadeIn(delay: 40.ms),
+                            // ── Motto Hero Banner (shown on first launch / no files) ──
+                            if (state.stats.totalFiles == 0 &&
+                                state.status != HomeStatus.loading)
+                              _MottoHeroBanner().animate().fadeIn(delay: 40.ms),
 
-                      // ── Storage Overview ─────────────────────────
-                      if (state.status == HomeStatus.loading)
-                        const SkeletonBox(height: 120, radius: 16)
-                            .animate()
-                            .fadeIn()
-                      else if (state.stats.totalFiles > 0)
-                        _StorageCard(
-                          stats: state.stats,
-                          indexStats: state.indexStats,
-                        )
-                            .animate()
-                            .fadeIn(delay: 60.ms)
-                            .slideY(begin: 0.04, end: 0),
+                            // ── Storage Overview ─────────────────────────
+                            if (state.status == HomeStatus.loading)
+                              const SkeletonBox(height: 120, radius: 16)
+                                  .animate()
+                                  .fadeIn()
+                            else if (state.stats.totalFiles > 0)
+                              _StorageCard(
+                                stats: state.stats,
+                                indexStats: state.indexStats,
+                              )
+                                  .animate()
+                                  .fadeIn(delay: 60.ms)
+                                  .slideY(begin: 0.04, end: 0),
 
-                      const SizedBox(height: 20),
+                            const SizedBox(height: 20),
 
-                      // ── AI status banner ─────────────────────────
-                      _AiBanner().animate().fadeIn(delay: 100.ms),
-                      const SizedBox(height: 20),
+                            // ── AI status banner ─────────────────────────
+                            _AiBanner().animate().fadeIn(delay: 100.ms),
+                            const SizedBox(height: 20),
 
-                      // ── Quick actions ─────────────────────────────
-                      const SectionHeader(title: 'Quick Actions'),
-                      const SizedBox(height: 8),
-                      _QuickActions().animate().fadeIn(delay: 140.ms),
-                      const SizedBox(height: 20),
+                            // ── Quick actions ─────────────────────────────
+                            const SectionHeader(title: 'Quick Actions'),
+                            const SizedBox(height: 8),
+                            _QuickActions().animate().fadeIn(delay: 140.ms),
+                            const SizedBox(height: 20),
 
-                      // ── Recent files header ───────────────────────
-                      if (state.stats.totalFiles > 0)
-                        SectionHeader(
-                          title: 'Recent Files',
-                          action: 'Timeline',
-                          onAction: () => context.go('/timeline'),
+                            // ── Recent files header ───────────────────────
+                            if (state.stats.totalFiles > 0)
+                              SectionHeader(
+                                title: 'Recent Files',
+                                action: 'Timeline',
+                                onAction: () => context.go('/timeline'),
+                              ),
+                            const SizedBox(height: 4),
+                          ],
                         ),
-                      const SizedBox(height: 4),
-                    ],
-                  ),
+                      ),
+                    ),
+
+                    // ── Recent files list ──────────────────────────────
+                    if (state.status == HomeStatus.loading)
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (_, i) => Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: const SkeletonBox(height: 80, radius: 12),
+                            ).animate().fadeIn(delay: (i * 40).ms),
+                            childCount: 6,
+                          ),
+                        ),
+                      )
+                    else if (state.recentFiles.isEmpty)
+                      SliverToBoxAdapter(
+                        child: _MottoHeroBanner(
+                          showStartCta: true,
+                          onImport: () => _showImportSheet(context),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        sliver: SliverMasonryGrid.count(
+                          crossAxisCount:
+                              MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                          itemBuilder: (context, i) =>
+                              _FileCard(entry: state.recentFiles[i], index: i)
+                                  .animate()
+                                  .fadeIn(delay: (i * 25).ms, duration: 220.ms)
+                                  .slideY(begin: 0.04, end: 0),
+                          childCount: state.recentFiles.length,
+                        ),
+                      ),
+
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+                  ],
                 ),
               ),
-
-              // ── Recent files list ──────────────────────────────
-              if (state.status == HomeStatus.loading)
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (_, i) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: const SkeletonBox(height: 80, radius: 12),
-                      ).animate().fadeIn(delay: (i * 40).ms),
-                      childCount: 6,
-                    ),
-                  ),
-                )
-              else if (state.recentFiles.isEmpty)
-                SliverToBoxAdapter(
-                  child: _MottoHeroBanner(
-                    showStartCta: true,
-                    onImport: () => _showImportSheet(context),
-                  ),
-                )
-              else
-                SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  sliver: SliverMasonryGrid.count(
-                    crossAxisCount:
-                        MediaQuery.of(context).size.width > 900 ? 4 : 2,
-                    mainAxisSpacing: 8,
-                    crossAxisSpacing: 8,
-                    itemBuilder: (context, i) =>
-                        _FileCard(entry: state.recentFiles[i], index: i)
-                            .animate()
-                            .fadeIn(delay: (i * 25).ms, duration: 220.ms)
-                            .slideY(begin: 0.04, end: 0),
-                    childCount: state.recentFiles.length,
-                  ),
-                ),
-
-              const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-            ],
-          ),
-        ),
 
               // ── Drag-and-drop overlay ────────────────────────────
               if (_isDraggingOver)
@@ -302,8 +302,9 @@ class _HomeAppBar extends StatelessWidget {
             margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
-              color: (isEngineActive ? DesignTokens.success : DesignTokens.warning)
-                  .withOpacity(0.12),
+              color:
+                  (isEngineActive ? DesignTokens.success : DesignTokens.warning)
+                      .withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: (isEngineActive
@@ -1185,10 +1186,9 @@ class _ImportSheet extends StatelessWidget {
           }
         }
         messenger.showSnackBar(SnackBar(
-          content: Text(
-              imported == 1
-                  ? 'Importing 1 file into MemoryOS…'
-                  : 'Importing $imported files into MemoryOS…'),
+          content: Text(imported == 1
+              ? 'Importing 1 file into MemoryOS…'
+              : 'Importing $imported files into MemoryOS…'),
           backgroundColor: DesignTokens.brand,
           duration: const Duration(seconds: 3),
         ));
