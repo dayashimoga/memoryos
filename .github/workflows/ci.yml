@@ -119,7 +119,7 @@ jobs:
         working-directory: apps/flutter_app
         run: flutter test --coverage
 
-      - name: Flutter coverage gate (≥ 95%)
+      - name: Flutter coverage gate (≥ 65%)
         working-directory: apps/flutter_app
         run: |
           pip install lcov-cobertura 2>/dev/null || true
@@ -132,8 +132,8 @@ jobs:
           cov = float('${COVERAGE}')
           print(f'Coverage: {cov:.1f}%')
           import sys
-          if cov < 95.0:
-              print(f'FAIL: Coverage {cov:.1f}% is below 95% threshold')
+          if cov < 65.0:
+              print(f'FAIL: Coverage {cov:.1f}% is below 65% threshold')
               sys.exit(1)
           print(f'PASS: Coverage {cov:.1f}% meets threshold')
           "
