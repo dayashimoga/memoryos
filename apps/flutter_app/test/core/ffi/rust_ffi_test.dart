@@ -123,5 +123,22 @@ void main() {
     test('hashFile returns -1', () {
       expect(RustFfi.hashFile('file-id'), -1);
     });
+
+    // v1.2 additions
+    test('categorizeText returns Unknown when unavailable', () {
+      expect(RustFfi.categorizeText('some text'), '["Unknown"]');
+    });
+
+    test('toggleFavorite returns -1 when unavailable', () {
+      expect(RustFfi.toggleFavorite('file-id'), -1);
+    });
+
+    test('listFavorites returns empty array when unavailable', () {
+      expect(RustFfi.listFavorites(), '[]');
+    });
+
+    test('recentFiles returns empty array when unavailable', () {
+      expect(RustFfi.recentFiles(10), '[]');
+    });
   });
 }
