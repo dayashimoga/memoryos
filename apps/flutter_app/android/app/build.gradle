@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace "com.example.memoryos"
-    compileSdk flutter.compileSdkVersion
+    compileSdk 35
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -20,8 +20,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.memoryos"
-        minSdk flutter.minSdkVersion
-        targetSdk flutter.targetSdkVersion
+        minSdk 23
+        targetSdk 35
         versionCode flutter.versionCode
         versionName flutter.versionName
     }
