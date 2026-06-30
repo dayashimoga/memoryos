@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/domain/repositories.dart';
@@ -13,8 +14,15 @@ import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
 /// Redesigned Home Dashboard — wired to HomeBloc for real data.
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  bool _isDraggingOver = false;
 
   @override
   Widget build(BuildContext context) {
@@ -34,12 +42,50 @@ class HomePage extends StatelessWidget {
         }
       },
       builder: (context, state) {
-        return RefreshIndicator(
-          onRefresh: () async {
-            context.read<HomeBloc>().add(HomeRefreshRequested());
-            await Future.delayed(const Duration(milliseconds: 800));
+        return DropRegion(
+          formats: Formats.standardFormats,
+          hitTestBehavior: HitTestBehavior.opaque,
+          onDropOver: (event) {
+            if (event.session.allowedOperations.contains(DropOperation.copy)) {
+              if (!_isDraggingOver) setState(() => _isDraggingOver = true);
+              return DropOperation.copy;
+            }
+            return DropOperation.none;
           },
-          color: DesignTokens.brand,
+          onDropLeave: (event) => setState(() => _isDraggingOver = false),
+          onDropEnded: (event) => setState(() => _isDraggingOver = false),
+          onPerformDrop: (event) async {
+            final homeBloc = context.read<HomeBloc>();
+            int count = 0;
+            for (final item in event.session.items) {
+              final reader = item.dataReader!;
+              if (reader.canProvide(Formats.fileUri)) {
+                reader.getValue<Uri>(Formats.fileUri, (uri) {
+                  if (uri != null) {
+                    final path = uri.toFilePath();
+                    homeBloc.add(HomeFileImported(path));
+                    count++;
+                  }
+                });
+              }
+            }
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Importing dropped files into MemoryOS…'),
+                backgroundColor: DesignTokens.brand,
+                duration: const Duration(seconds: 2),
+              ));
+            }
+            setState(() => _isDraggingOver = false);
+          },
+          child: Stack(
+            children: [
+              RefreshIndicator(
+                onRefresh: () async {
+                  context.read<HomeBloc>().add(HomeRefreshRequested());
+                  await Future.delayed(const Duration(milliseconds: 800));
+                },
+                color: DesignTokens.brand,
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
@@ -137,6 +183,64 @@ class HomePage extends StatelessWidget {
                 ),
 
               const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+            ],
+          ),
+        ),
+
+              // ── Drag-and-drop overlay ────────────────────────────
+              if (_isDraggingOver)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: DesignTokens.brand.withOpacity(0.08),
+                        border: Border.all(
+                          color: DesignTokens.brand,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: DesignTokens.brand.withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.file_download_rounded,
+                                color: DesignTokens.brand,
+                                size: 48,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Drop to import',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: DesignTokens.brand,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Files will be indexed automatically',
+                              style: TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 13,
+                                color: DesignTokens.brand,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         );

@@ -1,8 +1,11 @@
+import 'dart:io' as io;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:extended_image/extended_image.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
@@ -223,31 +226,48 @@ class _DetailsTab extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       physics: const BouncingScrollPhysics(),
       children: [
-        // Preview placeholder
-        Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: isDark ? DesignTokens.darkCard : DesignTokens.lightBg,
-            borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
-            border: Border.all(
-                color: isDark
-                    ? DesignTokens.darkBorder
-                    : DesignTokens.lightBorder),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              FileTypeDisplay.iconBox(entry.extension, boxSize: 64),
-              const SizedBox(height: 12),
-              Text(entry.filename,
-                  style: const TextStyle(
-                      fontFamily: 'Inter', fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ).animate().fadeIn(duration: 200.ms),
+        // ── Preview Panel ──────────────────────────────────────────
+        _FilePreviewPanel(entry: entry).animate().fadeIn(duration: 200.ms),
 
         const SizedBox(height: 20),
         const SectionHeader(title: 'File Information'),
+        const SizedBox(height: 8),
+
+        // Path row
+        PremiumCard(
+          child: Row(
+            children: [
+              const Icon(Icons.folder_open_rounded,
+                  size: 16, color: Color(0xFF64748B)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  entry.path,
+                  style: const TextStyle(
+                      fontFamily: 'monospace', fontSize: 11),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy_rounded, size: 16),
+                tooltip: 'Copy path',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: entry.path));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Path copied to clipboard'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+
         const SizedBox(height: 8),
 
         // Metadata grid
@@ -576,6 +596,198 @@ class _RelatedTab extends StatelessWidget {
       subtitle:
           'Once files are indexed and vector search is active, related files will appear here.',
       iconColor: DesignTokens.brand,
+    );
+  }
+}
+
+// ─── File Preview Panel ───────────────────────────────────────────────────────
+
+/// In-app preview panel — shows images directly, opens other files in system app.
+class _FilePreviewPanel extends StatelessWidget {
+  final FileEntry entry;
+  const _FilePreviewPanel({required this.entry});
+
+  static const _imageExtensions = {
+    'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'heic', 'heif', 'tiff'
+  };
+  static const _videoExtensions = {'mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v'};
+  static const _audioExtensions = {'mp3', 'wav', 'm4a', 'flac', 'ogg', 'aac'};
+
+  bool get _isImage => _imageExtensions.contains(entry.extension.toLowerCase());
+  bool get _isVideo => _videoExtensions.contains(entry.extension.toLowerCase());
+  bool get _isAudio => _audioExtensions.contains(entry.extension.toLowerCase());
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 200, maxHeight: 280),
+      decoration: BoxDecoration(
+        color: isDark ? DesignTokens.darkCard : DesignTokens.lightBg,
+        borderRadius: BorderRadius.circular(DesignTokens.radiusXl),
+        border: Border.all(
+          color: isDark ? DesignTokens.darkBorder : DesignTokens.lightBorder,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          // Preview content
+          if (_isImage)
+            Positioned.fill(
+              child: ExtendedImage.file(
+                io.File(entry.path),
+                fit: BoxFit.contain,
+                enableSlideOutPage: false,
+                enableLoadState: true,
+                loadStateChanged: (state) {
+                  if (state.extendedImageLoadState == LoadState.failed) {
+                    return _PreviewFallback(entry: entry, isDark: isDark);
+                  }
+                  return null;
+                },
+              ),
+            )
+          else
+            _PreviewFallback(entry: entry, isDark: isDark),
+
+          // Open button overlay
+          Positioned(
+            bottom: 12,
+            right: 12,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () async {
+                  final result = await OpenFilex.open(entry.path);
+                  if (result.type != ResultType.done && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                            'Cannot open file: ${result.message}'),
+                        backgroundColor: DesignTokens.warning,
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: DesignTokens.brand.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: DesignTokens.brand.withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.open_in_new_rounded,
+                          color: Colors.white, size: 14),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Open',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Video/Audio play badge
+          if (_isVideo || _isAudio)
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isVideo
+                          ? Icons.videocam_rounded
+                          : Icons.music_note_rounded,
+                      color: Colors.white,
+                      size: 13,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      _isVideo ? 'Video' : 'Audio',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewFallback extends StatelessWidget {
+  final FileEntry entry;
+  final bool isDark;
+  const _PreviewFallback({required this.entry, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          FileTypeDisplay.iconBox(entry.extension, boxSize: 72),
+          const SizedBox(height: 12),
+          Text(
+            entry.filename,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              color: isDark
+                  ? const Color(0xFF94A3B8)
+                  : const Color(0xFF475569),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            entry.formattedSize,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              color: isDark
+                  ? const Color(0xFF475569)
+                  : const Color(0xFF94A3B8),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

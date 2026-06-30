@@ -94,6 +94,9 @@ dependencies:
   # Storage info
   disk_space_plus: 0.2.4
 
+  # Local preferences / first-launch onboarding
+  shared_preferences: ^2.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

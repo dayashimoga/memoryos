@@ -19,8 +19,25 @@ import 'package:memoryos/features/toolbox/pages/toolbox_page.dart';
 
 /// Application router — GoRouter ShellRoute with all v1.2 feature routes.
 class AppRouter {
+  /// Whether onboarding has been completed (set from main.dart).
+  static bool _onboardingComplete = false;
+
+  static void setOnboardingComplete(bool value) {
+    _onboardingComplete = value;
+  }
+
   static final router = GoRouter(
     initialLocation: '/',
+    redirect: (context, state) {
+      final goingToOnboarding = state.uri.path == '/onboarding';
+      if (!_onboardingComplete && !goingToOnboarding) {
+        return '/onboarding';
+      }
+      if (_onboardingComplete && goingToOnboarding) {
+        return '/';
+      }
+      return null;
+    },
     routes: [
       // ── Onboarding (outside shell) ──────────────────────────────
       GoRoute(
