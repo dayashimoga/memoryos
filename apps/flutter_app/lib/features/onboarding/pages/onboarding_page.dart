@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:memoryos/core/router/app_router.dart';
 
 const _kOnboardingKey = 'onboarding_complete_v1';
 
@@ -74,9 +75,21 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Future<void> _complete() async {
     if (_completing) return;
     setState(() => _completing = true);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_kOnboardingKey, true);
-    if (mounted) context.go('/');
+    try {
+      final prefs = await SharedPreferences.getInstance()
+          .timeout(const Duration(seconds: 1));
+      await prefs
+          .setBool(_kOnboardingKey, true)
+          .timeout(const Duration(milliseconds: 500));
+    } catch (e) {
+      debugPrint(
+          '[MemoryOS] Failed to save onboarding completeness to disk: $e');
+    }
+    // Always force set onboarding complete in memory on router so the user goes forward
+    AppRouter.setOnboardingComplete(true);
+    if (mounted) {
+      context.go('/');
+    }
   }
 
   @override
@@ -350,6 +363,12 @@ class _OnboardingSlide extends StatelessWidget {
 
 /// Call this in main() before runApp to know if onboarding is needed.
 Future<bool> isOnboardingComplete() async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getBool(_kOnboardingKey) ?? false;
+  try {
+    final prefs = await SharedPreferences.getInstance()
+        .timeout(const Duration(seconds: 1));
+    return prefs.getBool(_kOnboardingKey) ?? false;
+  } catch (e) {
+    debugPrint('[MemoryOS] Failed to read onboarding status: $e');
+    return false;
+  }
 }
