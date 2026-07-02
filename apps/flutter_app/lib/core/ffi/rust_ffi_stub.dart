@@ -71,4 +71,18 @@ class RustFfi {
 
   // AI & categorization
   static String categorizeText(String text) => '["Unknown"]';
+
+  // New FFI endpoints
+  static String searchFts(String query) => '[]';
+  static int indexDirectory(String dirPath) => -1;
+  static String getTimeline(String from, String to, int limit) => '[]';
+  static String listCategories() => '[]';
+  static String getFilesByCategory(String category) => '[]';
+  static int saveSearchQuery(String query, int resultCount) => -1;
+  static String getSearchHistory(int limit) => '[]';
+  static String getProcessingStatus() => '{}';
+  static int generateThumbnail(String inputPath, String outputPath, int size) =>
+      -1;
+  static String getFilesByType(String fileType, int limit) => '[]';
+  static String getFilesInCollection(String collectionId) => '[]';
 }

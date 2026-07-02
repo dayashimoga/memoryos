@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:memoryos/core/di/service_locator.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
@@ -25,19 +26,100 @@ class _GalaxyPageState extends State<GalaxyPage>
   Offset _pan = Offset.zero;
   Offset _lastFocalPoint = Offset.zero;
 
-  // Demo nodes (real data will come from FileRepository.getKnowledgeGraph)
-  late final List<_GalaxyNode> _nodes;
+  List<_GalaxyNode> _nodes = [];
   late final Ticker _ticker;
 
   @override
   void initState() {
     super.initState();
-    _nodes = _buildDemoGraph();
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
     _ticker = createTicker(_tick)..start();
+    _loadGraph();
+  }
+
+  Future<void> _loadGraph() async {
+    try {
+      final categories =
+          await ServiceLocator.collectionRepo.getSmartCollections();
+      final nodes = <_GalaxyNode>[
+        _GalaxyNode(
+          id: 'root',
+          label: 'Your Memory',
+          icon: Icons.memory_rounded,
+          color: DesignTokens.brand,
+          x: 0,
+          y: 0,
+          radius: 32,
+          isCenter: true,
+        ),
+      ];
+
+      final angleStep =
+          (2 * math.pi) / (categories.isEmpty ? 1 : categories.length);
+      for (int i = 0; i < categories.length; i++) {
+        final cat = categories[i];
+        final angle = i * angleStep;
+        final dist = 160.0;
+        nodes.add(_GalaxyNode(
+          id: cat.id,
+          label: cat.name,
+          icon: _getCategoryIcon(cat.name),
+          color: _getCategoryColor(cat.name),
+          x: dist * math.cos(angle),
+          y: dist * math.sin(angle),
+          radius: (18.0 + (cat.fileCount * 0.5)).clamp(18.0, 32.0),
+        ));
+      }
+
+      if (mounted) {
+        setState(() {
+          _nodes = nodes;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _nodes = _buildDemoGraph();
+        });
+      }
+    }
+  }
+
+  IconData _getCategoryIcon(String name) {
+    switch (name.toLowerCase()) {
+      case 'documents':
+        return Icons.description_rounded;
+      case 'images':
+        return Icons.image_rounded;
+      case 'audio':
+        return Icons.music_note_rounded;
+      case 'video':
+        return Icons.videocam_rounded;
+      case 'archives':
+        return Icons.folder_zip_rounded;
+      default:
+        return Icons.category_rounded;
+    }
+  }
+
+  Color _getCategoryColor(String name) {
+    switch (name.toLowerCase()) {
+      case 'documents':
+        return const Color(0xFF6366F1);
+      case 'images':
+        return const Color(0xFFEC4899);
+      case 'audio':
+        return const Color(0xFF10B981);
+      case 'video':
+        return const Color(0xFFF59E0B);
+      case 'archives':
+        return const Color(0xFF8B5CF6);
+      default:
+        return const Color(0xFF64748B);
+    }
   }
 
   @override

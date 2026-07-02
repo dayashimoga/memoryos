@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS files (
     summary           TEXT,
     embedding_id      INTEGER,
     is_encrypted      INTEGER NOT NULL DEFAULT 0,
+    is_favorite       INTEGER NOT NULL DEFAULT 0,
     indexing_status   TEXT NOT NULL DEFAULT '"Pending"',
     created_at        TEXT NOT NULL,
     modified_at       TEXT NOT NULL,
@@ -123,3 +124,71 @@ CREATE TABLE IF NOT EXISTS flashcards (
 );
 
 CREATE INDEX IF NOT EXISTS idx_flashcards_next_review ON flashcards(next_review);
+
+-- ── Categories ────────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS categories (
+    id         TEXT PRIMARY KEY,
+    name       TEXT NOT NULL UNIQUE,
+    icon       TEXT,
+    color      TEXT,
+    created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS file_categories (
+    file_id     TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+    PRIMARY KEY (file_id, category_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_file_categories_file ON file_categories(file_id);
+CREATE INDEX IF NOT EXISTS idx_file_categories_cat ON file_categories(category_id);
+
+-- ── Search history ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS search_history (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    query      TEXT NOT NULL,
+    result_count INTEGER NOT NULL DEFAULT 0,
+    searched_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_history_time ON search_history(searched_at DESC);
+
+-- ── Processing queue ──────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS processing_queue (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    file_id    TEXT NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+    stage      TEXT NOT NULL DEFAULT 'pending',
+    progress   INTEGER NOT NULL DEFAULT 0,
+    error      TEXT,
+    queued_at  TEXT NOT NULL,
+    started_at TEXT,
+    completed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_processing_queue_stage ON processing_queue(stage);
+
+-- ── Timeline index ────────────────────────────────────────────────────────────
+
+CREATE INDEX IF NOT EXISTS idx_files_created_at ON files(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_files_modified_at ON files(modified_at DESC);
+CREATE INDEX IF NOT EXISTS idx_files_file_type ON files(file_type);
+
+-- ── FTS triggers (keep FTS index in sync with files table) ────────────────────
+
+CREATE TRIGGER IF NOT EXISTS files_fts_insert AFTER INSERT ON files BEGIN
+    INSERT INTO files_fts(rowid, id, filename, ocr_text, summary)
+    VALUES (new.rowid, new.id, new.filename, new.ocr_text, new.summary);
+END;
+
+CREATE TRIGGER IF NOT EXISTS files_fts_update AFTER UPDATE OF filename, ocr_text, summary ON files BEGIN
+    DELETE FROM files_fts WHERE rowid = old.rowid;
+    INSERT INTO files_fts(rowid, id, filename, ocr_text, summary)
+    VALUES (new.rowid, new.id, new.filename, new.ocr_text, new.summary);
+END;
+
+CREATE TRIGGER IF NOT EXISTS files_fts_delete AFTER DELETE ON files BEGIN
+    DELETE FROM files_fts WHERE rowid = old.rowid;
+END;

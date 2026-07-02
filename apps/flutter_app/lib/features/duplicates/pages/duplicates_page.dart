@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
+import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
+import 'package:memoryos/core/di/service_locator.dart';
 
 /// Storage Optimizer — wired to StorageBloc for real analysis data.
 class DuplicatesPage extends StatelessWidget {
@@ -587,16 +589,99 @@ class _SimilarTab extends StatelessWidget {
 
 // ─── Large Files Tab ──────────────────────────────────────────────────────────
 
-class _LargeFilesTab extends StatelessWidget {
+class _LargeFilesTab extends StatefulWidget {
+  const _LargeFilesTab();
+
+  @override
+  State<_LargeFilesTab> createState() => _LargeFilesTabState();
+}
+
+class _LargeFilesTabState extends State<_LargeFilesTab> {
+  List<FileEntry> _files = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFiles();
+  }
+
+  Future<void> _loadFiles() async {
+    try {
+      final files = await ServiceLocator.fileRepo.getLargeFiles(minSizeMb: 10);
+      if (mounted) {
+        setState(() {
+          _files = files;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return EmptyStateWidget(
-      icon: Icons.folder_zip_outlined,
-      title: 'No large files detected',
-      subtitle: 'Files over 50 MB will appear here after scanning.',
-      actionLabel: 'Scan Now',
-      onAction: () => context.read<StorageBloc>().add(StorageScanRequested()),
-      iconColor: DesignTokens.brand,
+    if (_isLoading) {
+      return const Center(
+          child: CircularProgressIndicator(color: DesignTokens.brand));
+    }
+
+    if (_files.isEmpty) {
+      return EmptyStateWidget(
+        icon: Icons.folder_zip_outlined,
+        title: 'No large files detected',
+        subtitle: 'Files over 10 MB will appear here.',
+        actionLabel: 'Scan Again',
+        onAction: _loadFiles,
+        iconColor: DesignTokens.brand,
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: _files.length,
+      itemBuilder: (context, index) {
+        final file = _files[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DesignTokens.radiusLg),
+          ),
+          child: ListTile(
+            leading: FileTypeDisplay.iconBox(file.extension),
+            title: Text(
+              file.filename,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            subtitle: Text(
+              file.formattedSize,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                color: Color(0xFF64748B),
+                fontSize: 11,
+              ),
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+              onPressed: () async {
+                await ServiceLocator.fileRepo.deleteFile(file.id);
+                _loadFiles();
+              },
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -1,4 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
+import 'package:memoryos/core/di/service_locator.dart';
 import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/ffi/rust_ffi.dart';
@@ -20,8 +24,14 @@ class FfiFileRepository implements FileRepository {
       modifiedAt: DateTime.tryParse(map['modified_at'] ?? '') ?? DateTime.now(),
       tags: List<String>.from(map['tags'] ?? []),
       summary: map['summary'],
-      indexingStatus: IndexingStatus.completed,
-      isFavorite: map['is_encrypted'] == true || false,
+      indexingStatus: map['indexing_status'] == 'Completed'
+          ? IndexingStatus.completed
+          : map['indexing_status'] == 'Failed'
+              ? IndexingStatus.failed
+              : map['indexing_status'] == 'InProgress'
+                  ? IndexingStatus.indexing
+                  : IndexingStatus.pending,
+      isFavorite: map['is_favorite'] == true || false,
     );
   }
 
@@ -43,23 +53,14 @@ class FfiFileRepository implements FileRepository {
   Future<List<FileEntry>> searchFiles(String query,
       {String? typeFilter,
       SearchRanking ranking = SearchRanking.relevance}) async {
-    if (!RustFfi.isAvailable)
+    if (!RustFfi.isAvailable) {
       return _fallback.searchFiles(query,
           typeFilter: typeFilter, ranking: ranking);
+    }
     try {
-      final jsonStr = RustFfi.search(query);
+      final jsonStr = RustFfi.searchFts(query);
       final List decoded = jsonDecode(jsonStr);
-      final list = decoded
-          .map((item) {
-            // Rust search returns RankedFileItem or SearchResultItem: { file_id, score, snippet, match_type }
-            // We will fetch the actual file details from Rust FFI by ID or parse it directly
-            final fileId = item['file_id'] ?? '';
-            final fileJson = RustFfi.getFile(fileId);
-            if (fileJson == 'null') return null;
-            return parseFileEntry(jsonDecode(fileJson));
-          })
-          .whereType<FileEntry>()
-          .toList();
+      final list = decoded.map((item) => parseFileEntry(item)).toList();
 
       if (typeFilter != null) {
         final filter = typeFilter.toLowerCase();
@@ -78,7 +79,20 @@ class FfiFileRepository implements FileRepository {
 
   @override
   Future<List<FileEntry>> getFilesInCollection(String collectionId) async {
-    return _fallback.getFilesInCollection(collectionId);
+    if (!RustFfi.isAvailable)
+      return _fallback.getFilesInCollection(collectionId);
+    try {
+      if (!collectionId.contains('-') && collectionId.length < 30) {
+        final jsonStr = RustFfi.getFilesByCategory(collectionId);
+        final List decoded = jsonDecode(jsonStr);
+        return decoded.map((item) => parseFileEntry(item)).toList();
+      }
+      final jsonStr = RustFfi.getFilesInCollection(collectionId);
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => parseFileEntry(item)).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   @override
@@ -112,7 +126,11 @@ class FfiFileRepository implements FileRepository {
   }
 
   @override
-  Future<void> toggleFavorite(String id) async {}
+  Future<void> toggleFavorite(String id) async {
+    if (RustFfi.isAvailable) {
+      RustFfi.toggleFavorite(id);
+    }
+  }
 
   @override
   Future<void> deleteFile(String id) async {
@@ -140,11 +158,29 @@ class FfiFileRepository implements FileRepository {
   }
 
   @override
-  Future<List<FileEntry>> getFavorites() async => [];
+  Future<List<FileEntry>> getFavorites() async {
+    if (!RustFfi.isAvailable) return [];
+    try {
+      final jsonStr = RustFfi.listFavorites();
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => parseFileEntry(item)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
-  Future<List<FileEntry>> getByDateRange(DateTime from, DateTime to) async =>
-      [];
+  Future<List<FileEntry>> getByDateRange(DateTime from, DateTime to) async {
+    if (!RustFfi.isAvailable) return [];
+    try {
+      final jsonStr = RustFfi.getTimeline(
+          from.toUtc().toIso8601String(), to.toUtc().toIso8601String(), 100);
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => parseFileEntry(item)).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
   Future<List<FileEntry>> getSimilarFiles(String fileId) async => [];
@@ -170,25 +206,64 @@ class FfiFileRepository implements FileRepository {
   Future<void> batchMove(List<String> ids, String collectionId) async {}
 
   @override
-  Future<List<String>> getSearchHistory() async => [];
+  Future<List<String>> getSearchHistory() async {
+    if (!RustFfi.isAvailable) return [];
+    try {
+      final jsonStr = RustFfi.getSearchHistory(10);
+      final List decoded = jsonDecode(jsonStr);
+      return List<String>.from(decoded);
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
-  Future<void> saveSearchQuery(String query) async {}
+  Future<void> saveSearchQuery(String query) async {
+    if (RustFfi.isAvailable) {
+      RustFfi.saveSearchQuery(query, 0);
+    }
+  }
 
   @override
   Future<IndexStats> getIndexStats() async {
     if (!RustFfi.isAvailable) return const IndexStats();
     try {
-      final jsonStr = RustFfi.storageStats();
+      final jsonStr = RustFfi.getProcessingStatus();
       final map = jsonDecode(jsonStr);
       return IndexStats(
         indexedFiles: map['indexed_files'] ?? 0,
-        pendingFiles: map['pending_files'] ?? 0,
+        pendingFiles: map['pending_count'] ?? 0,
         failedFiles: 0,
-        isRunning: false,
+        isRunning: (map['pending_count'] ?? 0) > 0,
       );
     } catch (_) {
       return const IndexStats();
+    }
+  }
+
+  @override
+  Future<void> moveToVault(String id) async {
+    if (RustFfi.isAvailable) {
+      RustFfi.vaultAdd(id);
+    }
+  }
+
+  @override
+  Future<void> removeFromVault(String id) async {
+    if (RustFfi.isAvailable) {
+      RustFfi.vaultRemove(id);
+    }
+  }
+
+  @override
+  Future<List<FileEntry>> getVaultFiles() async {
+    if (!RustFfi.isAvailable) return [];
+    try {
+      final jsonStr = RustFfi.vaultList();
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) => parseFileEntry(item)).toList();
+    } catch (_) {
+      return [];
     }
   }
 }
@@ -258,38 +333,18 @@ class FfiSearchRepository implements SearchRepository {
     if (!RustFfi.isAvailable) return _fallback.search(query);
     try {
       final stopwatch = Stopwatch()..start();
-      final jsonStr = RustFfi.search(query.text);
+      final jsonStr = RustFfi.searchFts(query.text);
       final List decoded = jsonDecode(jsonStr);
 
-      final hits = decoded
-          .map((item) {
-            final fileId = item['file_id'] ?? '';
-            final fileJson = RustFfi.getFile(fileId);
-            if (fileJson == 'null') return null;
-
-            final fileMap = jsonDecode(fileJson);
-            final fileEntry = FileEntry(
-              id: fileMap['id'] ?? '',
-              path: fileMap['path'] ?? '',
-              filename: fileMap['filename'] ?? '',
-              extension: fileMap['extension'] ?? '',
-              fileType: FileType.fromExtension(fileMap['extension'] ?? ''),
-              sizeBytes: fileMap['size_bytes'] ?? 0,
-              createdAt: DateTime.tryParse(fileMap['created_at'] ?? '') ??
-                  DateTime.now(),
-              modifiedAt: DateTime.tryParse(fileMap['modified_at'] ?? '') ??
-                  DateTime.now(),
-            );
-
-            return RankedFile(
-              file: fileEntry,
-              score: item['score'] ?? 0.0,
-              matchSnippet: item['snippet'],
-              matchType: SearchMatchType.ocrText,
-            );
-          })
-          .whereType<RankedFile>()
-          .toList();
+      final hits = decoded.map((item) {
+        final fileEntry = FfiFileRepository.parseFileEntry(item);
+        return RankedFile(
+          file: fileEntry,
+          score: 1.0, // FTS rank placeholder or score
+          matchSnippet: fileEntry.ocrText ?? fileEntry.summary,
+          matchType: SearchMatchType.ocrText,
+        );
+      }).toList();
 
       stopwatch.stop();
       return SearchResult(
@@ -346,8 +401,27 @@ class FfiCollectionRepository implements CollectionRepository {
   }
 
   @override
-  Future<List<Collection>> getSmartCollections() async =>
-      _fallback.getSmartCollections();
+  Future<List<Collection>> getSmartCollections() async {
+    if (!RustFfi.isAvailable) return _fallback.getSmartCollections();
+    try {
+      final jsonStr = RustFfi.listCategories();
+      final List decoded = jsonDecode(jsonStr);
+      return decoded.map((item) {
+        final name = item['name'] ?? 'Unknown';
+        return Collection(
+          id: name,
+          name: name,
+          description: 'Automatically categorized files',
+          fileCount: item['file_count'] ?? 0,
+          isSmart: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
 
   @override
   Future<Collection?> getCollectionById(String id) async =>
@@ -356,7 +430,7 @@ class FfiCollectionRepository implements CollectionRepository {
   @override
   Future<void> createCollection(Collection collection) async {
     if (RustFfi.isAvailable) {
-      RustFfi.collectionCreate(collection.name, collection.description);
+      RustFfi.collectionCreate(collection.name, collection.description ?? '');
     }
   }
 
@@ -549,5 +623,59 @@ class FfiToolboxRepository implements ToolboxRepository {
       return _fallback.restoreBackup(backupPath, dataDir, keyPhrase);
     }
     return RustFfi.backupRestore(backupPath, dataDir, keyPhrase) == 0;
+  }
+}
+
+class FfiThumbnailRepository implements ThumbnailRepository {
+  final ThumbnailRepository _fallback = const StubThumbnailRepository();
+
+  const FfiThumbnailRepository();
+
+  Future<String> _getThumbnailsDir() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/memoryos/thumbnails';
+    await Directory(path).create(recursive: true);
+    return path;
+  }
+
+  @override
+  Future<Uint8List?> getThumbnail(String fileId, {int size = 256}) async {
+    if (!RustFfi.isAvailable) return _fallback.getThumbnail(fileId, size: size);
+    try {
+      final file = await ServiceLocator.fileRepo.getFileById(fileId);
+      if (file == null) return null;
+
+      // Only generate thumbnails for images
+      if (file.fileType != FileType.image) return null;
+
+      final thumbsDir = await _getThumbnailsDir();
+      final thumbPath = '$thumbsDir/$fileId.png';
+      final thumbFile = File(thumbPath);
+
+      if (!await thumbFile.exists()) {
+        final res = RustFfi.generateThumbnail(file.path, thumbPath, size);
+        if (res != 0) return null;
+      }
+
+      return await thumbFile.readAsBytes();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> generateThumbnail(String fileId) async {
+    await getThumbnail(fileId);
+  }
+
+  @override
+  Future<void> clearCache() async {
+    try {
+      final thumbsDir = await _getThumbnailsDir();
+      final dir = Directory(thumbsDir);
+      if (await dir.exists()) {
+        await dir.delete(recursive: true);
+      }
+    } catch (_) {}
   }
 }

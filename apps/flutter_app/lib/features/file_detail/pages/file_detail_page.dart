@@ -1,4 +1,5 @@
 import 'dart:io' as io;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -10,6 +11,7 @@ import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
+import 'package:memoryos/core/di/service_locator.dart';
 
 /// File Detail — 3-tab layout with real AI actions via AiBloc.
 class FileDetailPage extends StatefulWidget {
@@ -24,13 +26,34 @@ class _FileDetailPageState extends State<FileDetailPage>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
   bool _isFavorite = false;
+  FileEntry? _entry;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _tabs = TabController(length: 3, vsync: this);
-    // Trigger AI check and summary when opened
     context.read<AiBloc>().add(AiCheckModel());
+    _loadFile();
+  }
+
+  Future<void> _loadFile() async {
+    try {
+      final entry = await ServiceLocator.fileRepo.getFileById(widget.fileId);
+      if (mounted) {
+        setState(() {
+          _entry = entry;
+          _isFavorite = entry?.isFavorite ?? false;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -41,20 +64,29 @@ class _FileDetailPageState extends State<FileDetailPage>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: DesignTokens.brand),
+        ),
+      );
+    }
 
-    // Construct a representative FileEntry from the fileId
-    // (In production, HomeBloc holds the file — lookup via FileRepository)
-    final entry = FileEntry(
-      id: widget.fileId,
-      path: '/home/user/files/${widget.fileId}',
-      filename: '${widget.fileId}.file',
-      extension: 'file',
-      fileType: FileType.unknown,
-      sizeBytes: 0,
-      createdAt: DateTime.now(),
-      modifiedAt: DateTime.now(),
-    );
+    final entry = _entry;
+    if (entry == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('File Details')),
+        body: EmptyStateWidget(
+          icon: Icons.error_outline_rounded,
+          title: 'File not found',
+          subtitle: 'The file may have been moved or deleted.',
+          actionLabel: 'Go Back',
+          onAction: () => context.pop(),
+        ),
+      );
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
@@ -643,18 +675,19 @@ class _FilePreviewPanel extends StatelessWidget {
           // Preview content
           if (_isImage)
             Positioned.fill(
-              child: ExtendedImage.file(
-                io.File(entry.path),
-                fit: BoxFit.contain,
-                enableSlideOutPage: false,
-                enableLoadState: true,
-                loadStateChanged: (state) {
-                  if (state.extendedImageLoadState == LoadState.failed) {
-                    return _PreviewFallback(entry: entry, isDark: isDark);
-                  }
-                  return null;
-                },
-              ),
+              child: kIsWeb
+                  ? Image.network(
+                      entry.path,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) =>
+                          _PreviewFallback(entry: entry, isDark: isDark),
+                    )
+                  : Image.file(
+                      io.File(entry.path),
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) =>
+                          _PreviewFallback(entry: entry, isDark: isDark),
+                    ),
             )
           else
             _PreviewFallback(entry: entry, isDark: isDark),

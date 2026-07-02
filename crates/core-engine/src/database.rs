@@ -52,8 +52,8 @@ impl MetadataDb {
             r#"INSERT INTO files (
                 id, path, filename, extension, file_type, size_bytes,
                 sha256_hash, phash, ocr_text, summary, embedding_id,
-                is_encrypted, indexing_status, created_at, modified_at, indexed_at
-            ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)"#,
+                is_encrypted, is_favorite, indexing_status, created_at, modified_at, indexed_at
+            ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17)"#,
             params![
                 entry.id.to_string(),
                 entry.path,
@@ -67,6 +67,7 @@ impl MetadataDb {
                 entry.summary,
                 entry.embedding_id,
                 entry.is_encrypted,
+                entry.is_favorite,
                 serde_json::to_string(&entry.indexing_status)?,
                 entry.created_at.to_rfc3339(),
                 entry.modified_at.to_rfc3339(),
@@ -462,6 +463,235 @@ impl MetadataDb {
         Ok(entries)
     }
 
+    // ── OCR & Summary updates ─────────────────────────────────────────────────
+
+    /// Update OCR text for a file.
+    pub fn update_ocr_text(&self, id: &Uuid, text: &str) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE files SET ocr_text = ?1 WHERE id = ?2",
+            params![text, id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// Update AI summary for a file.
+    pub fn update_summary(&self, id: &Uuid, summary: &str) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE files SET summary = ?1 WHERE id = ?2",
+            params![summary, id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    // ── FTS search ────────────────────────────────────────────────────────────
+
+    /// Search files using FTS5 full-text index.
+    /// Falls back to LIKE search if FTS query fails.
+    pub fn search_fts(&self, query: &str) -> Result<Vec<FileEntry>, CoreError> {
+        // Try FTS5 first
+        let fts_result: Result<Vec<FileEntry>, rusqlite::Error> = (|| {
+            let mut stmt = self.conn.prepare(
+                r#"SELECT f.* FROM files f
+                   INNER JOIN files_fts fts ON f.id = fts.id
+                   WHERE files_fts MATCH ?1
+                   ORDER BY rank
+                   LIMIT 100"#,
+            )?;
+            let entries = stmt
+                .query_map(params![query], Self::row_to_file_entry)?
+                .collect::<Result<Vec<FileEntry>, rusqlite::Error>>()?;
+            Ok(entries)
+        })();
+
+        match fts_result {
+            Ok(entries) if !entries.is_empty() => Ok(entries),
+            _ => {
+                // Fallback to LIKE search
+                self.search_files_by_text(query)
+            }
+        }
+    }
+
+    // ── Categories ────────────────────────────────────────────────────────────
+
+    /// Get or create a category by name, returning its UUID.
+    pub fn get_or_create_category(&self, name: &str) -> Result<Uuid, CoreError> {
+        // Try to find existing
+        let existing: Result<String, _> = self.conn.query_row(
+            "SELECT id FROM categories WHERE name = ?1",
+            params![name],
+            |row| row.get(0),
+        );
+
+        if let Ok(id_str) = existing {
+            return Ok(Uuid::parse_str(&id_str).unwrap_or_default());
+        }
+
+        // Create new
+        let id = Uuid::new_v4();
+        self.conn.execute(
+            "INSERT OR IGNORE INTO categories (id, name, created_at) VALUES (?1, ?2, ?3)",
+            params![id.to_string(), name, Utc::now().to_rfc3339()],
+        )?;
+        Ok(id)
+    }
+
+    /// Add a category to a file.
+    pub fn add_category_to_file(
+        &self,
+        file_id: &Uuid,
+        category_id: &Uuid,
+    ) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO file_categories (file_id, category_id) VALUES (?1, ?2)",
+            params![file_id.to_string(), category_id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// Get categories for a file.
+    pub fn get_categories_for_file(&self, file_id: &Uuid) -> Result<Vec<String>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT c.name FROM categories c INNER JOIN file_categories fc ON c.id = fc.category_id WHERE fc.file_id = ?1",
+        )?;
+        let cats = stmt
+            .query_map(params![file_id.to_string()], |row| {
+                row.get::<_, String>(0)
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(cats)
+    }
+
+    /// Get files in a category by name.
+    pub fn get_files_by_category(&self, category_name: &str) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            r#"SELECT f.* FROM files f
+               INNER JOIN file_categories fc ON f.id = fc.file_id
+               INNER JOIN categories c ON c.id = fc.category_id
+               WHERE c.name = ?1
+               ORDER BY f.created_at DESC LIMIT 200"#,
+        )?;
+        let entries = stmt
+            .query_map(params![category_name], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    /// List all categories with file counts.
+    pub fn list_categories(&self) -> Result<Vec<(String, String, usize)>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            r#"SELECT c.id, c.name, COUNT(fc.file_id) as cnt
+               FROM categories c
+               LEFT JOIN file_categories fc ON c.id = fc.category_id
+               GROUP BY c.id, c.name
+               ORDER BY cnt DESC"#,
+        )?;
+        let cats = stmt
+            .query_map([], |row| {
+                let id: String = row.get(0)?;
+                let name: String = row.get(1)?;
+                let count: i64 = row.get(2)?;
+                Ok((id, name, count as usize))
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(cats)
+    }
+
+    // ── Timeline ──────────────────────────────────────────────────────────────
+
+    /// Get files grouped by date for timeline view.
+    pub fn get_timeline_entries(
+        &self,
+        from: &str,
+        to: &str,
+        limit: usize,
+    ) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM files WHERE created_at >= ?1 AND created_at <= ?2 ORDER BY created_at DESC LIMIT ?3",
+        )?;
+        let entries = stmt
+            .query_map(params![from, to, limit as i64], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
+    // ── Search history ────────────────────────────────────────────────────────
+
+    /// Save a search query for history.
+    pub fn save_search_query(&self, query: &str, result_count: usize) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT INTO search_history (query, result_count, searched_at) VALUES (?1, ?2, ?3)",
+            params![query, result_count as i64, Utc::now().to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Get recent search history.
+    pub fn get_search_history(&self, limit: usize) -> Result<Vec<String>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT query FROM search_history ORDER BY searched_at DESC LIMIT ?1",
+        )?;
+        let history = stmt
+            .query_map(params![limit as i64], |row| row.get::<_, String>(0))?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(history)
+    }
+
+    // ── Processing queue ──────────────────────────────────────────────────────
+
+    /// Enqueue a file for processing.
+    pub fn enqueue_processing(&self, file_id: &Uuid) -> Result<(), CoreError> {
+        self.conn.execute(
+            "INSERT OR IGNORE INTO processing_queue (file_id, stage, queued_at) VALUES (?1, 'pending', ?2)",
+            params![file_id.to_string(), Utc::now().to_rfc3339()],
+        )?;
+        Ok(())
+    }
+
+    /// Update processing stage for a file.
+    pub fn update_processing_stage(
+        &self,
+        file_id: &Uuid,
+        stage: &str,
+        progress: i32,
+    ) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE processing_queue SET stage = ?1, progress = ?2, started_at = COALESCE(started_at, ?3) WHERE file_id = ?4 AND completed_at IS NULL",
+            params![stage, progress, Utc::now().to_rfc3339(), file_id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// Mark processing as completed.
+    pub fn complete_processing(&self, file_id: &Uuid) -> Result<(), CoreError> {
+        self.conn.execute(
+            "UPDATE processing_queue SET stage = 'completed', progress = 100, completed_at = ?1 WHERE file_id = ?2 AND completed_at IS NULL",
+            params![Utc::now().to_rfc3339(), file_id.to_string()],
+        )?;
+        Ok(())
+    }
+
+    /// Get pending processing count.
+    pub fn pending_processing_count(&self) -> Result<usize, CoreError> {
+        let count: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM processing_queue WHERE completed_at IS NULL",
+            [],
+            |row| row.get(0),
+        )?;
+        Ok(count as usize)
+    }
+
+    /// Get files by type.
+    pub fn get_files_by_type(&self, file_type: &str, limit: usize) -> Result<Vec<FileEntry>, CoreError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT * FROM files WHERE file_type = ?1 ORDER BY created_at DESC LIMIT ?2",
+        )?;
+        let entries = stmt
+            .query_map(params![file_type, limit as i64], Self::row_to_file_entry)?
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(entries)
+    }
+
     fn row_to_file_entry(row: &rusqlite::Row<'_>) -> rusqlite::Result<FileEntry> {
         let file_type_str: String = row.get("file_type")?;
         let status_str: String = row.get("indexing_status")?;
@@ -485,6 +715,7 @@ impl MetadataDb {
             tags: Vec::new(), // loaded separately via join
             collection_ids: Vec::new(),
             is_encrypted: row.get("is_encrypted")?,
+            is_favorite: row.get("is_favorite")?,
             indexing_status: serde_json::from_str(&status_str).unwrap_or(IndexingStatus::Pending),
             created_at: DateTime::parse_from_rfc3339(&created_str)
                 .map(|d| d.with_timezone(&Utc))

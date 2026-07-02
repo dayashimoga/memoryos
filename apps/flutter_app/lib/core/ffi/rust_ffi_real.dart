@@ -633,4 +633,209 @@ class RustFfi {
       return '[]';
     }
   }
+
+  /// Full-text search using FTS5 index.
+  static String searchFts(String query) {
+    if (!isAvailable) return '[]';
+    final queryPtr = query.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(Pointer<Utf8>),
+          Pointer<Utf8> Function(Pointer<Utf8>)>('memoryos_search_fts');
+      final ptr = func(queryPtr);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    } finally {
+      malloc.free(queryPtr);
+    }
+  }
+
+  /// Recursively index all files in a directory.
+  static int indexDirectory(String dirPath) {
+    if (!isAvailable) return -1;
+    final pathPtr = dirPath.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Int32 Function(Pointer<Utf8>),
+          int Function(Pointer<Utf8>)>('memoryos_index_directory');
+      return func(pathPtr);
+    } catch (_) {
+      return -1;
+    } finally {
+      malloc.free(pathPtr);
+    }
+  }
+
+  /// Get files for timeline within date range.
+  static String getTimeline(String from, String to, int limit) {
+    if (!isAvailable) return '[]';
+    final fromPtr = from.toNativeUtf8();
+    final toPtr = to.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<
+          Pointer<Utf8> Function(Pointer<Utf8>, Pointer<Utf8>, Int32),
+          Pointer<Utf8> Function(
+              Pointer<Utf8>, Pointer<Utf8>, int)>('memoryos_get_timeline');
+      final ptr = func(fromPtr, toPtr, limit);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    } finally {
+      malloc.free(fromPtr);
+      malloc.free(toPtr);
+    }
+  }
+
+  /// List all categories.
+  static String listCategories() {
+    if (!isAvailable) return '[]';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(),
+          Pointer<Utf8> Function()>('memoryos_list_categories');
+      final ptr = func();
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    }
+  }
+
+  /// Get files in a specific category.
+  static String getFilesByCategory(String category) {
+    if (!isAvailable) return '[]';
+    final catPtr = category.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<
+          Pointer<Utf8> Function(Pointer<Utf8>),
+          Pointer<Utf8> Function(
+              Pointer<Utf8>)>('memoryos_get_files_by_category');
+      final ptr = func(catPtr);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    } finally {
+      malloc.free(catPtr);
+    }
+  }
+
+  /// Save search query to history.
+  static int saveSearchQuery(String query, int resultCount) {
+    if (!isAvailable) return -1;
+    final queryPtr = query.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Int32 Function(Pointer<Utf8>, Int32),
+          int Function(Pointer<Utf8>, int)>('memoryos_save_search_query');
+      return func(queryPtr, resultCount);
+    } catch (_) {
+      return -1;
+    } finally {
+      malloc.free(queryPtr);
+    }
+  }
+
+  /// Get search history.
+  static String getSearchHistory(int limit) {
+    if (!isAvailable) return '[]';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(Int32),
+          Pointer<Utf8> Function(int)>('memoryos_get_search_history');
+      final ptr = func(limit);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    }
+  }
+
+  /// Get processing status.
+  static String getProcessingStatus() {
+    if (!isAvailable) return '{}';
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<Pointer<Utf8> Function(),
+          Pointer<Utf8> Function()>('memoryos_get_processing_status');
+      final ptr = func();
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '{}';
+    }
+  }
+
+  /// Generate a thumbnail for an image/file.
+  static int generateThumbnail(String inputPath, String outputPath, int size) {
+    if (!isAvailable) return -1;
+    final inPtr = inputPath.toNativeUtf8();
+    final outPtr = outputPath.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<
+          Int32 Function(Pointer<Utf8>, Pointer<Utf8>, Int32),
+          int Function(Pointer<Utf8>, Pointer<Utf8>,
+              int)>('memoryos_generate_thumbnail');
+      return func(inPtr, outPtr, size);
+    } catch (_) {
+      return -1;
+    } finally {
+      malloc.free(inPtr);
+      malloc.free(outPtr);
+    }
+  }
+
+  /// Get files by type.
+  static String getFilesByType(String fileType, int limit) {
+    if (!isAvailable) return '[]';
+    final typePtr = fileType.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<
+          Pointer<Utf8> Function(Pointer<Utf8>, Int32),
+          Pointer<Utf8> Function(
+              Pointer<Utf8>, int)>('memoryos_get_files_by_type');
+      final ptr = func(typePtr, limit);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    } finally {
+      malloc.free(typePtr);
+    }
+  }
+
+  /// Get files inside a manual collection.
+  static String getFilesInCollection(String collectionId) {
+    if (!isAvailable) return '[]';
+    final idPtr = collectionId.toNativeUtf8();
+    try {
+      final lib = _lib!;
+      final func = lib.lookupFunction<
+          Pointer<Utf8> Function(Pointer<Utf8>),
+          Pointer<Utf8> Function(
+              Pointer<Utf8>)>('memoryos_get_files_in_collection');
+      final ptr = func(idPtr);
+      final str = ptr.toDartString();
+      _freeString!(ptr);
+      return str;
+    } catch (_) {
+      return '[]';
+    } finally {
+      malloc.free(idPtr);
+    }
+  }
 }

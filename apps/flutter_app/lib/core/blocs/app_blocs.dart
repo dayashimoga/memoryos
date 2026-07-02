@@ -614,6 +614,139 @@ class CollectionsBloc extends Bloc<CollectionsEvent, CollectionsState> {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// IMPORT BLOC — progress, stages, batch processing
+// ═══════════════════════════════════════════════════════════════════
+
+abstract class ImportEvent extends Equatable {
+  const ImportEvent();
+  @override
+  List<Object?> get props => [];
+}
+
+class ImportStarted extends ImportEvent {
+  final List<String> paths;
+  const ImportStarted(this.paths);
+  @override
+  List<Object?> get props => [paths];
+}
+
+class ImportResetRequested extends ImportEvent {}
+
+enum ImportStatus { idle, processing, success, failure }
+
+class ImportState extends Equatable {
+  final ImportStatus status;
+  final String currentFile;
+  final double progress;
+  final String stage;
+  final int totalFiles;
+  final int processedFiles;
+  final String? error;
+
+  const ImportState({
+    this.status = ImportStatus.idle,
+    this.currentFile = '',
+    this.progress = 0.0,
+    this.stage = '',
+    this.totalFiles = 0,
+    this.processedFiles = 0,
+    this.error,
+  });
+
+  ImportState copyWith({
+    ImportStatus? status,
+    String? currentFile,
+    double? progress,
+    String? stage,
+    int? totalFiles,
+    int? processedFiles,
+    String? error,
+  }) =>
+      ImportState(
+        status: status ?? this.status,
+        currentFile: currentFile ?? this.currentFile,
+        progress: progress ?? this.progress,
+        stage: stage ?? this.stage,
+        totalFiles: totalFiles ?? this.totalFiles,
+        processedFiles: processedFiles ?? this.processedFiles,
+        error: error ?? this.error,
+      );
+
+  @override
+  List<Object?> get props => [
+        status,
+        currentFile,
+        progress,
+        stage,
+        totalFiles,
+        processedFiles,
+        error,
+      ];
+}
+
+class ImportBloc extends Bloc<ImportEvent, ImportState> {
+  final FileRepository _files;
+  final HomeBloc _homeBloc;
+
+  ImportBloc(this._files, this._homeBloc) : super(const ImportState()) {
+    on<ImportStarted>(_onImportStarted);
+    on<ImportResetRequested>(_onReset);
+  }
+
+  Future<void> _onImportStarted(
+      ImportStarted event, Emitter<ImportState> emit) async {
+    if (event.paths.isEmpty) return;
+
+    emit(ImportState(
+      status: ImportStatus.processing,
+      totalFiles: event.paths.length,
+      processedFiles: 0,
+      currentFile: '',
+      progress: 0.0,
+      stage: 'Initializing import...',
+    ));
+
+    int processed = 0;
+    for (final path in event.paths) {
+      final filename = path.split('/').last.split('\\').last;
+      emit(state.copyWith(
+        currentFile: filename,
+        stage: 'Indexing & extracting metadata...',
+        progress: processed / event.paths.length,
+      ));
+
+      try {
+        await _files.importFile(path);
+      } catch (e) {
+        emit(state.copyWith(error: e.toString()));
+      }
+
+      processed++;
+      emit(state.copyWith(
+        processedFiles: processed,
+        progress: processed / event.paths.length,
+      ));
+    }
+
+    emit(ImportState(
+      status: ImportStatus.success,
+      totalFiles: event.paths.length,
+      processedFiles: processed,
+      currentFile: '',
+      progress: 1.0,
+      stage: 'Successfully imported $processed files.',
+    ));
+
+    // Auto-refresh home dashboard stats & recent files
+    _homeBloc.add(HomeRefreshRequested());
+  }
+
+  void _onReset(ImportResetRequested event, Emitter<ImportState> emit) {
+    emit(const ImportState());
+  }
+}
+
 // Helper extension for debounce (requires rxdart or manual impl)
 extension _StreamDebounce<T> on Stream<T> {
   Stream<T> debounce(Duration d) => transform(StreamTransformer.fromHandlers(

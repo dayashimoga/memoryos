@@ -30,6 +30,7 @@ class ServiceLocator {
   static late final StorageBloc _storageBloc;
   static late final AiBloc _aiBloc;
   static late final CollectionsBloc _collectionsBloc;
+  static late final ImportBloc _importBloc;
 
   static bool _initialized = false;
 
@@ -72,7 +73,7 @@ class ServiceLocator {
     _aiRepo = aiRepo ?? const FfiAiRepository();
     _searchRepo = searchRepo ?? const FfiSearchRepository();
     _storageRepo = storageRepo ?? const FfiStorageRepository();
-    _thumbnailRepo = thumbnailRepo ?? const StubThumbnailRepository();
+    _thumbnailRepo = thumbnailRepo ?? const FfiThumbnailRepository();
     _toolboxRepo = toolboxRepo ?? const FfiToolboxRepository();
 
     // BLoCs
@@ -82,6 +83,7 @@ class ServiceLocator {
     _storageBloc = StorageBloc(_storageRepo);
     _aiBloc = AiBloc(_aiRepo);
     _collectionsBloc = CollectionsBloc(_collectionRepo);
+    _importBloc = ImportBloc(_fileRepo, _homeBloc);
 
     // Kick off initial AI model check
     _aiBloc.add(AiCheckModel());
@@ -105,6 +107,7 @@ class ServiceLocator {
   static StorageBloc get storageBloc => _storageBloc;
   static AiBloc get aiBloc => _aiBloc;
   static CollectionsBloc get collectionsBloc => _collectionsBloc;
+  static ImportBloc get importBloc => _importBloc;
 
   /// All BlocProviders for the widget tree root.
   static List<BlocProvider> get providers => [
@@ -114,6 +117,7 @@ class ServiceLocator {
         BlocProvider<StorageBloc>.value(value: _storageBloc),
         BlocProvider<AiBloc>.value(value: _aiBloc),
         BlocProvider<CollectionsBloc>.value(value: _collectionsBloc),
+        BlocProvider<ImportBloc>.value(value: _importBloc),
       ];
 
   static void dispose() {
@@ -123,6 +127,7 @@ class ServiceLocator {
     _storageBloc.close();
     _aiBloc.close();
     _collectionsBloc.close();
+    _importBloc.close();
     _initialized = false;
   }
 }

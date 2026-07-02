@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_picker/file_picker.dart' as fp;
@@ -26,225 +27,333 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocConsumer<HomeBloc, HomeState>(
-      listener: (context, state) {
-        if (state.status == HomeStatus.error) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.error ?? 'An error occurred'),
-              backgroundColor: DesignTokens.error,
-            ),
-          );
-        }
-        // Auto-trigger storage scan once files are loaded (so duplicate count shows)
-        if (state.status == HomeStatus.loaded && state.stats.totalFiles > 0) {
-          context.read<StorageBloc>().add(StorageScanRequested());
-        }
-      },
-      builder: (context, state) {
-        return DropRegion(
-          formats: Formats.standardFormats,
-          hitTestBehavior: HitTestBehavior.opaque,
-          onDropOver: (event) {
-            if (event.session.allowedOperations.contains(DropOperation.copy)) {
-              if (!_isDraggingOver) setState(() => _isDraggingOver = true);
-              return DropOperation.copy;
-            }
-            return DropOperation.none;
-          },
-          onDropLeave: (event) => setState(() => _isDraggingOver = false),
-          onDropEnded: (event) => setState(() => _isDraggingOver = false),
-          onPerformDrop: (event) async {
-            final homeBloc = context.read<HomeBloc>();
-            int count = 0;
-            for (final item in event.session.items) {
-              final reader = item.dataReader!;
-              if (reader.canProvide(Formats.fileUri)) {
-                reader.getValue<Uri>(Formats.fileUri, (uri) {
-                  if (uri != null) {
-                    final path = uri.toFilePath();
-                    homeBloc.add(HomeFileImported(path));
-                    count++;
-                  }
-                });
-              }
-            }
-            if (context.mounted) {
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<ImportBloc, ImportState>(
+          listener: (context, importState) {
+            if (importState.status == ImportStatus.success) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Importing dropped files into MemoryOS…'),
-                backgroundColor: DesignTokens.brand,
-                duration: const Duration(seconds: 2),
+                content: Text(importState.stage),
+                backgroundColor: DesignTokens.success,
+                duration: const Duration(seconds: 4),
               ));
+              context.read<ImportBloc>().add(ImportResetRequested());
+            } else if (importState.status == ImportStatus.failure) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(importState.error ?? 'Import failed'),
+                backgroundColor: DesignTokens.error,
+              ));
+              context.read<ImportBloc>().add(ImportResetRequested());
             }
-            setState(() => _isDraggingOver = false);
           },
-          child: Stack(
-            children: [
-              RefreshIndicator(
-                onRefresh: () async {
-                  context.read<HomeBloc>().add(HomeRefreshRequested());
-                  await Future.delayed(const Duration(milliseconds: 800));
-                },
-                color: DesignTokens.brand,
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    _HomeAppBar(),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      sliver: SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // ── Search / Command Bar ────────────────────
-                            _HeroSearchBar().animate().fadeIn(duration: 300.ms),
-                            const SizedBox(height: 20),
-
-                            // ── Motto Hero Banner (shown on first launch / no files) ──
-                            if (state.stats.totalFiles == 0 &&
-                                state.status != HomeStatus.loading)
-                              _MottoHeroBanner().animate().fadeIn(delay: 40.ms),
-
-                            // ── Storage Overview ─────────────────────────
-                            if (state.status == HomeStatus.loading)
-                              const SkeletonBox(height: 120, radius: 16)
-                                  .animate()
-                                  .fadeIn()
-                            else if (state.stats.totalFiles > 0)
-                              _StorageCard(
-                                stats: state.stats,
-                                indexStats: state.indexStats,
-                              )
-                                  .animate()
-                                  .fadeIn(delay: 60.ms)
-                                  .slideY(begin: 0.04, end: 0),
-
-                            const SizedBox(height: 20),
-
-                            // ── AI status banner ─────────────────────────
-                            _AiBanner().animate().fadeIn(delay: 100.ms),
-                            const SizedBox(height: 20),
-
-                            // ── Quick actions ─────────────────────────────
-                            const SectionHeader(title: 'Quick Actions'),
-                            const SizedBox(height: 8),
-                            _QuickActions().animate().fadeIn(delay: 140.ms),
-                            const SizedBox(height: 20),
-
-                            // ── Recent files header ───────────────────────
-                            if (state.stats.totalFiles > 0)
-                              SectionHeader(
-                                title: 'Recent Files',
-                                action: 'Timeline',
-                                onAction: () => context.go('/timeline'),
-                              ),
-                            const SizedBox(height: 4),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // ── Recent files list ──────────────────────────────
-                    if (state.status == HomeStatus.loading)
+        ),
+        BlocListener<HomeBloc, HomeState>(
+          listener: (context, state) {
+            if (state.status == HomeStatus.error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.error ?? 'An error occurred'),
+                  backgroundColor: DesignTokens.error,
+                ),
+              );
+            }
+            // Auto-trigger storage scan once files are loaded (so duplicate count shows)
+            if (state.status == HomeStatus.loaded &&
+                state.stats.totalFiles > 0) {
+              context.read<StorageBloc>().add(StorageScanRequested());
+            }
+          },
+        ),
+      ],
+      child: BlocBuilder<HomeBloc, HomeState>(
+        builder: (context, state) {
+          return DropRegion(
+            formats: Formats.standardFormats,
+            hitTestBehavior: HitTestBehavior.opaque,
+            onDropOver: (event) {
+              if (event.session.allowedOperations
+                  .contains(DropOperation.copy)) {
+                if (!_isDraggingOver) setState(() => _isDraggingOver = true);
+                return DropOperation.copy;
+              }
+              return DropOperation.none;
+            },
+            onDropLeave: (event) => setState(() => _isDraggingOver = false),
+            onDropEnded: (event) => setState(() => _isDraggingOver = false),
+            onPerformDrop: (event) async {
+              final paths = <String>[];
+              int totalItems = event.session.items.length;
+              int processedItems = 0;
+              for (final item in event.session.items) {
+                final reader = item.dataReader!;
+                if (reader.canProvide(Formats.fileUri)) {
+                  reader.getValue<Uri>(Formats.fileUri, (uri) {
+                    processedItems++;
+                    if (uri != null) {
+                      paths.add(uri.toFilePath());
+                    }
+                    if (processedItems == totalItems && paths.isNotEmpty) {
+                      context.read<ImportBloc>().add(ImportStarted(paths));
+                    }
+                  });
+                } else {
+                  processedItems++;
+                }
+              }
+              setState(() => _isDraggingOver = false);
+            },
+            child: Stack(
+              children: [
+                RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<HomeBloc>().add(HomeRefreshRequested());
+                    await Future.delayed(const Duration(milliseconds: 800));
+                  },
+                  color: DesignTokens.brand,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      _HomeAppBar(),
                       SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (_, i) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: const SkeletonBox(height: 80, radius: 12),
-                            ).animate().fadeIn(delay: (i * 40).ms),
-                            childCount: 6,
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        sliver: SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // ── Search / Command Bar ────────────────────
+                              _HeroSearchBar()
+                                  .animate()
+                                  .fadeIn(duration: 300.ms),
+                              const SizedBox(height: 20),
+
+                              // ── Motto Hero Banner (shown on first launch / no files) ──
+                              if (state.stats.totalFiles == 0 &&
+                                  state.status != HomeStatus.loading)
+                                _MottoHeroBanner()
+                                    .animate()
+                                    .fadeIn(delay: 40.ms),
+
+                              // ── Storage Overview ─────────────────────────
+                              if (state.status == HomeStatus.loading)
+                                const SkeletonBox(height: 120, radius: 16)
+                                    .animate()
+                                    .fadeIn()
+                              else if (state.stats.totalFiles > 0)
+                                _StorageCard(
+                                  stats: state.stats,
+                                  indexStats: state.indexStats,
+                                )
+                                    .animate()
+                                    .fadeIn(delay: 60.ms)
+                                    .slideY(begin: 0.04, end: 0),
+
+                              const SizedBox(height: 20),
+
+                              // ── AI status banner ─────────────────────────
+                              _AiBanner().animate().fadeIn(delay: 100.ms),
+                              const SizedBox(height: 20),
+
+                              // ── Quick actions ─────────────────────────────
+                              const SectionHeader(title: 'Quick Actions'),
+                              const SizedBox(height: 8),
+                              _QuickActions().animate().fadeIn(delay: 140.ms),
+                              const SizedBox(height: 20),
+
+                              // ── Recent files header ───────────────────────
+                              if (state.stats.totalFiles > 0)
+                                SectionHeader(
+                                  title: 'Recent Files',
+                                  action: 'Timeline',
+                                  onAction: () => context.go('/timeline'),
+                                ),
+                              const SizedBox(height: 4),
+                            ],
                           ),
                         ),
-                      )
-                    else if (state.recentFiles.isEmpty)
-                      SliverToBoxAdapter(
-                        child: _MottoHeroBanner(
-                          showStartCta: true,
-                          onImport: () => _showImportSheet(context),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        sliver: SliverMasonryGrid.count(
-                          crossAxisCount:
-                              MediaQuery.of(context).size.width > 900 ? 4 : 2,
-                          mainAxisSpacing: 8,
-                          crossAxisSpacing: 8,
-                          itemBuilder: (context, i) =>
-                              _FileCard(entry: state.recentFiles[i], index: i)
-                                  .animate()
-                                  .fadeIn(delay: (i * 25).ms, duration: 220.ms)
-                                  .slideY(begin: 0.04, end: 0),
-                          childCount: state.recentFiles.length,
-                        ),
                       ),
 
-                    const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-                  ],
+                      // ── Recent files list ──────────────────────────────
+                      if (state.status == HomeStatus.loading)
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (_, i) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child:
+                                    const SkeletonBox(height: 80, radius: 12),
+                              ).animate().fadeIn(delay: (i * 40).ms),
+                              childCount: 6,
+                            ),
+                          ),
+                        )
+                      else if (state.recentFiles.isEmpty)
+                        SliverToBoxAdapter(
+                          child: _MottoHeroBanner(
+                            showStartCta: true,
+                            onImport: () => _showImportSheet(context),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          sliver: SliverMasonryGrid.count(
+                            crossAxisCount:
+                                MediaQuery.of(context).size.width > 900 ? 4 : 2,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            itemBuilder: (context, i) => _FileCard(
+                                    entry: state.recentFiles[i], index: i)
+                                .animate()
+                                .fadeIn(delay: (i * 25).ms, duration: 220.ms)
+                                .slideY(begin: 0.04, end: 0),
+                            childCount: state.recentFiles.length,
+                          ),
+                        ),
+
+                      const SliverPadding(
+                          padding: EdgeInsets.only(bottom: 100)),
+                    ],
+                  ),
                 ),
-              ),
 
-              // ── Drag-and-drop overlay ────────────────────────────
-              if (_isDraggingOver)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      decoration: BoxDecoration(
-                        color: DesignTokens.brand.withOpacity(0.08),
-                        border: Border.all(
-                          color: DesignTokens.brand,
-                          width: 2,
+                // ── Drag-and-drop overlay ────────────────────────────
+                if (_isDraggingOver)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: DesignTokens.brand.withOpacity(0.08),
+                          border: Border.all(
+                            color: DesignTokens.brand,
+                            width: 2,
+                          ),
                         ),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: DesignTokens.brand.withOpacity(0.12),
-                                shape: BoxShape.circle,
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: DesignTokens.brand.withOpacity(0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.file_download_rounded,
+                                  color: DesignTokens.brand,
+                                  size: 48,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.file_download_rounded,
-                                color: DesignTokens.brand,
-                                size: 48,
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Drop to import',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: DesignTokens.brand,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Drop to import',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: DesignTokens.brand,
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Files will be indexed automatically',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  color: DesignTokens.brand,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Files will be indexed automatically',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 13,
-                                color: DesignTokens.brand,
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
+
+                // ── Floating Import Progress Card ──────────────────────────────
+                BlocBuilder<ImportBloc, ImportState>(
+                  builder: (context, importState) {
+                    if (importState.status == ImportStatus.processing) {
+                      return Positioned(
+                        bottom: 24,
+                        left: 16,
+                        right: 16,
+                        child: Card(
+                          elevation: 12,
+                          shadowColor: Colors.black45,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          color: Theme.of(context)
+                              .cardTheme
+                              .color
+                              ?.withOpacity(0.92),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 36,
+                                      height: 36,
+                                      child: CircularProgressIndicator(
+                                        value: importState.progress,
+                                        color: DesignTokens.brand,
+                                        backgroundColor:
+                                            Theme.of(context).dividerColor,
+                                        strokeWidth: 3.5,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            'Importing Files (${importState.processedFiles}/${importState.totalFiles})',
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            importState.currentFile,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: Color(0xFF64748B),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
                 ),
-            ],
-          ),
-        );
-      },
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1178,20 +1287,11 @@ class _ImportSheet extends StatelessWidget {
       }
 
       if (result != null && result.files.isNotEmpty) {
-        int imported = 0;
-        for (final file in result.files) {
-          if (file.path != null) {
-            homeBloc.add(HomeFileImported(file.path!));
-            imported++;
-          }
+        final paths =
+            result.files.map((f) => f.path).whereType<String>().toList();
+        if (paths.isNotEmpty && context.mounted) {
+          context.read<ImportBloc>().add(ImportStarted(paths));
         }
-        messenger.showSnackBar(SnackBar(
-          content: Text(imported == 1
-              ? 'Importing 1 file into MemoryOS…'
-              : 'Importing $imported files into MemoryOS…'),
-          backgroundColor: DesignTokens.brand,
-          duration: const Duration(seconds: 3),
-        ));
       }
     } catch (e) {
       messenger.showSnackBar(
@@ -1229,7 +1329,7 @@ class _ImportSheet extends StatelessWidget {
               final url = controller.text.trim();
               if (url.isNotEmpty) {
                 Navigator.pop(ctx);
-                context.read<HomeBloc>().add(HomeFileImported(url));
+                context.read<ImportBloc>().add(ImportStarted([url]));
               }
             },
             child: const Text('Import'),

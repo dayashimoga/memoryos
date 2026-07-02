@@ -28,6 +28,9 @@ abstract class FileRepository {
   Future<List<String>> getSearchHistory();
   Future<void> saveSearchQuery(String query);
   Future<IndexStats> getIndexStats();
+  Future<void> moveToVault(String id);
+  Future<void> removeFromVault(String id);
+  Future<List<FileEntry>> getVaultFiles();
 }
 
 // ─── Collection Repository ────────────────────────────────────────────────────
@@ -299,6 +302,12 @@ class StubFileRepository implements FileRepository {
   Future<void> saveSearchQuery(String query) async {}
   @override
   Future<IndexStats> getIndexStats() async => const IndexStats();
+  @override
+  Future<void> moveToVault(String id) async {}
+  @override
+  Future<void> removeFromVault(String id) async {}
+  @override
+  Future<List<FileEntry>> getVaultFiles() async => [];
 }
 
 class StubCollectionRepository implements CollectionRepository {

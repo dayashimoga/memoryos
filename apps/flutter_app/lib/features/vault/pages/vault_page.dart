@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart' as auth;
 import 'package:local_auth/local_auth.dart';
+import 'package:file_picker/file_picker.dart' as fp;
+import 'package:memoryos/core/di/service_locator.dart';
+import 'package:memoryos/core/domain/entities.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
 
@@ -192,10 +196,80 @@ class _SecurityBadge extends StatelessWidget {
 
 // ─── Unlocked View ────────────────────────────────────────────────────────────
 
-class _UnlockedVaultView extends StatelessWidget {
+// ─── Unlocked View ────────────────────────────────────────────────────────────
+
+class _UnlockedVaultView extends StatefulWidget {
   final VoidCallback onLock;
 
   const _UnlockedVaultView({required this.onLock});
+
+  @override
+  State<_UnlockedVaultView> createState() => _UnlockedVaultViewState();
+}
+
+class _UnlockedVaultViewState extends State<_UnlockedVaultView> {
+  List<FileEntry> _files = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFiles();
+  }
+
+  Future<void> _loadFiles() async {
+    try {
+      final files = await ServiceLocator.fileRepo.getVaultFiles();
+      if (mounted) {
+        setState(() {
+          _files = files;
+          _isLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _pickAndEncryptFiles() async {
+    try {
+      final result = await fp.FilePicker.platform.pickFiles(
+        allowMultiple: true,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        setState(() => _isLoading = true);
+        for (final file in result.files) {
+          if (file.path != null) {
+            // First import/index if not already done
+            await ServiceLocator.fileRepo.importFile(file.path!);
+            // Then look it up to find ID or generate one if needed
+            final dbFile =
+                await ServiceLocator.fileRepo.getRecentFiles(limit: 5);
+            final match = dbFile.firstWhere((f) => f.path == file.path,
+                orElse: () => dbFile.first);
+            await ServiceLocator.fileRepo.moveToVault(match.id);
+          }
+        }
+        await _loadFiles();
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _decryptFile(String fileId) async {
+    setState(() => _isLoading = true);
+    try {
+      await ServiceLocator.fileRepo.removeFromVault(fileId);
+      await _loadFiles();
+    } catch (_) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -212,25 +286,79 @@ class _UnlockedVaultView extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
-            onPressed: () {},
+            onPressed: _pickAndEncryptFiles,
             tooltip: 'Add to vault',
           ),
           IconButton(
             icon: const Icon(Icons.lock_rounded),
-            onPressed: onLock,
+            onPressed: widget.onLock,
             tooltip: 'Lock vault',
           ),
         ],
       ),
-      body: EmptyStateWidget(
-        icon: Icons.shield_rounded,
-        title: 'Your vault is empty',
-        subtitle:
-            'Add sensitive files to encrypt them with AES-256-GCM.\nThey will only be accessible after authentication.',
-        actionLabel: 'Add Files to Vault',
-        onAction: () {},
-        iconColor: DesignTokens.success,
-      ),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: DesignTokens.brand))
+          : _files.isEmpty
+              ? EmptyStateWidget(
+                  icon: Icons.shield_rounded,
+                  title: 'Your vault is empty',
+                  subtitle:
+                      'Add sensitive files to encrypt them with AES-256-GCM.\nThey will only be accessible after authentication.',
+                  actionLabel: 'Add Files to Vault',
+                  onAction: _pickAndEncryptFiles,
+                  iconColor: DesignTokens.success,
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _files.length,
+                  itemBuilder: (context, index) {
+                    final file = _files[index];
+                    return PremiumCard(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                      onTap: () {},
+                      child: Row(
+                        children: [
+                          FileTypeDisplay.iconBox(file.extension),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  file.filename,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  file.formattedSize,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    color: Color(0xFF64748B),
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.lock_open_rounded,
+                                color: DesignTokens.success),
+                            tooltip: 'Remove from Vault (Decrypt)',
+                            onPressed: () => _decryptFile(file.id),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }
