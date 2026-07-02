@@ -4,6 +4,7 @@ import 'package:memoryos/core/di/service_locator.dart';
 import 'package:memoryos/core/ffi/rust_ffi.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 /// Universal Digital Toolbox — Offline Swiss Army Knife for digital content.
 class ToolboxPage extends StatefulWidget {
@@ -617,7 +618,7 @@ class _ToolboxPageState extends State<ToolboxPage>
               isFilePicker: true),
           const SizedBox(height: 12),
           _buildTextField('Extraction Target Folder', _archiveOutputController,
-              isFilePicker: true),
+              isFolderPicker: true),
           const SizedBox(height: 12),
           _buildTextField(
               'Archive Password / Key (Optional)', _archivePasswordController,
@@ -768,7 +769,9 @@ class _ToolboxPageState extends State<ToolboxPage>
   }
 
   Widget _buildTextField(String label, TextEditingController controller,
-      {bool obscure = false, bool isFilePicker = false}) {
+      {bool obscure = false,
+      bool isFilePicker = false,
+      bool isFolderPicker = false}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -783,20 +786,56 @@ class _ToolboxPageState extends State<ToolboxPage>
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            suffixIcon: isFilePicker
+            suffixIcon: (isFilePicker || isFolderPicker)
                 ? IconButton(
-                    icon: const Icon(Icons.file_open_rounded, size: 18),
+                    icon: Icon(
+                        isFolderPicker
+                            ? Icons.create_new_folder_rounded
+                            : Icons.file_open_rounded,
+                        size: 18),
                     onPressed: () async {
                       try {
-                        final result = await FilePicker.platform.pickFiles(
-                          allowMultiple: false,
-                        );
-                        if (result != null &&
-                            result.files.single.path != null) {
-                          controller.text = result.files.single.path!;
+                        if (Theme.of(context).platform == TargetPlatform.android) {
+                          if (isFolderPicker) {
+                            final manageStatus = await Permission.manageExternalStorage.request();
+                            if (!manageStatus.isGranted) {
+                              final storageStatus = await Permission.storage.request();
+                              if (!storageStatus.isGranted) {
+                                _showStatus(
+                                    'Storage permission is required to select folder.',
+                                    isError: true);
+                                return;
+                              }
+                            }
+                          } else {
+                            final storageStatus = await Permission.storage.request();
+                            if (!storageStatus.isGranted) {
+                              _showStatus(
+                                    'Storage permission is required to select file.',
+                                    isError: true);
+                              return;
+                            }
+                          }
+                        }
+
+                        if (isFolderPicker) {
+                          final path = await FilePicker.platform.getDirectoryPath();
+                          if (path != null && path.isNotEmpty) {
+                            controller.text = path;
+                          }
+                        } else {
+                          final result = await FilePicker.platform.pickFiles(
+                            allowMultiple: false,
+                          );
+                          if (result != null &&
+                              result.files.single.path != null) {
+                            controller.text = result.files.single.path!;
+                          }
                         }
                       } catch (e) {
-                        _showStatus('Failed to select file: $e', isError: true);
+                        _showStatus(
+                            'Failed to select ${isFolderPicker ? 'directory' : 'file'}: $e',
+                            isError: true);
                       }
                     },
                   )

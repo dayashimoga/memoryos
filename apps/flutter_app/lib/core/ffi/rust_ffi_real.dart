@@ -169,7 +169,16 @@ class RustFfi {
         _lib = DynamicLibrary.process();
       } else if (Platform.isAndroid) {
         // On Android, the .so is packaged in the APK jniLibs directory.
-        // cargo-ndk outputs libcore_engine.so; the Android linker loads it by name.
+        // cargo-ndk outputs libcore_engine.so; we pre-load its dependency libraries
+        // first to ensure the dynamic linker resolves all imported symbols successfully.
+        try {
+          DynamicLibrary.open('libai_engine.so');
+          DynamicLibrary.open('libduplicate_engine.so');
+          DynamicLibrary.open('libocr_engine.so');
+          DynamicLibrary.open('libsearch_engine.so');
+        } catch (_) {
+          // Pre-loading is best-effort — dynamic linker may resolve them on newer Android.
+        }
         _lib = DynamicLibrary.open('libcore_engine.so');
       } else {
         // Linux desktop

@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:super_drag_and_drop/super_drag_and_drop.dart';
 import 'package:memoryos/core/blocs/app_blocs.dart';
 import 'package:memoryos/core/domain/entities.dart';
@@ -1331,11 +1332,35 @@ class _ImportSheet extends StatelessWidget {
     (Icons.link_rounded, 'URL / Web Page', 'Save a web page to your library'),
   ];
 
+  Future<bool> _requestPermission(BuildContext context, Permission permission, String permissionName) async {
+    final status = await permission.status;
+    if (status.isGranted) return true;
+    final result = await permission.request();
+    if (result.isGranted) return true;
+    
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$permissionName permission is required to perform this action.'),
+          backgroundColor: DesignTokens.error,
+        ),
+      );
+    }
+    return false;
+  }
+
   Future<void> _handleImport(BuildContext context, String optionName) async {
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context); // Dismiss sheet first
     try {
       if (optionName == 'Entire Folder') {
+        if (Theme.of(context).platform == TargetPlatform.android) {
+          final manageGranted = await _requestPermission(context, Permission.manageExternalStorage, 'Manage Files');
+          if (!manageGranted) {
+            final storageGranted = await _requestPermission(context, Permission.storage, 'Storage');
+            if (!storageGranted) return;
+          }
+        }
         final dirPath = await fp.FilePicker.platform.getDirectoryPath();
         if (dirPath != null && dirPath.isNotEmpty && context.mounted) {
           context.read<ImportBloc>().add(ImportFolderStarted(dirPath));
@@ -1345,17 +1370,43 @@ class _ImportSheet extends StatelessWidget {
 
       fp.FilePickerResult? result;
       if (optionName == 'Photo Library') {
+        if (Theme.of(context).platform == TargetPlatform.android) {
+          final photosGranted = await _requestPermission(context, Permission.photos, 'Photos');
+          if (!photosGranted) {
+            final storageGranted = await _requestPermission(context, Permission.storage, 'Storage');
+            if (!storageGranted) return;
+          }
+        }
         result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.media,
           allowMultiple: true,
         );
-      } else if (optionName == 'Files' ||
-          optionName == 'Screenshots Folder') {
+      } else if (optionName == 'Files') {
+        if (Theme.of(context).platform == TargetPlatform.android) {
+          final storageGranted = await _requestPermission(context, Permission.storage, 'Storage');
+          if (!storageGranted) return;
+        }
+        result = await fp.FilePicker.platform.pickFiles(
+          type: fp.FileType.any,
+          allowMultiple: true,
+        );
+      } else if (optionName == 'Screenshots Folder') {
+        if (Theme.of(context).platform == TargetPlatform.android) {
+          final manageGranted = await _requestPermission(context, Permission.manageExternalStorage, 'Manage Files');
+          if (!manageGranted) {
+            final storageGranted = await _requestPermission(context, Permission.storage, 'Storage');
+            if (!storageGranted) return;
+          }
+        }
         result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.any,
           allowMultiple: true,
         );
       } else if (optionName == 'Voice Note') {
+        if (Theme.of(context).platform == TargetPlatform.android) {
+          final micGranted = await _requestPermission(context, Permission.microphone, 'Microphone');
+          if (!micGranted) return;
+        }
         result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.audio,
           allowMultiple: true,
