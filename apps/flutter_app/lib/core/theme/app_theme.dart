@@ -124,16 +124,7 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
-      cardTheme: const CardThemeData(
-        elevation: 0,
-        color: DesignTokens.lightCard,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          side: BorderSide(color: DesignTokens.lightBorder),
-        ),
-        margin: EdgeInsets.zero,
-      ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: DesignTokens.lightBg,
@@ -281,16 +272,7 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
       ),
-      cardTheme: const CardThemeData(
-        elevation: 0,
-        color: DesignTokens.darkCard,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-          side: BorderSide(color: DesignTokens.darkBorder),
-        ),
-        margin: EdgeInsets.zero,
-      ),
+
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: DesignTokens.darkCard,
