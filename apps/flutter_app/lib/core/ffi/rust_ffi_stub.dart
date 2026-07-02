@@ -3,7 +3,10 @@
 class RustFfi {
   // Lifecycle
   static void initialize() {}
-  static bool get isAvailable => false;
+  static void initializeMockBindings() {}
+  static bool isAvailableOverride = false;
+  static bool get isAvailable => isAvailableOverride || false;
+  static int mockInitResult = 0;
   static int init(String dataDir) => -1;
   static bool isInitialized() => false;
   static String getVersion() => '0.1.0-stub';

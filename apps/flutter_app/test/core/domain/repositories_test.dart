@@ -35,10 +35,11 @@ void main() {
       expect(await repo.getFavorites(), isEmpty);
     });
 
-    test('getIndexStats returns defaults', () async {
-      final stats = await repo.getIndexStats();
-      expect(stats.indexedFiles, 0);
-      expect(stats.isRunning, false);
+    test('remaining stub file repository methods', () async {
+      expect(await repo.importDirectory('/dir'), 0);
+      await repo.moveToVault('id');
+      await repo.removeFromVault('id');
+      expect(await repo.getVaultFiles(), isEmpty);
     });
   });
 
@@ -170,6 +171,74 @@ void main() {
       expect(item.name, '');
       expect(item.size, 0);
       expect(item.isDir, false);
+    });
+  });
+
+  group('Remaining Value Objects & Stub Repositories', () {
+    test('SearchResult isNotEmpty check', () {
+      final fileEntry = FileEntry(
+        id: 'f1', path: '/tmp/f1', filename: 'f1', extension: 'png', fileType: FileType.image,
+        sizeBytes: 100, createdAt: DateTime.now(), modifiedAt: DateTime.now(),
+      );
+      final res = SearchResult(
+        hits: [RankedFile(file: fileEntry, score: 1.0, matchSnippet: 'snippet', matchType: SearchMatchType.filename)],
+        total: 1,
+        elapsed: Duration.zero,
+        query: 'q',
+      );
+      expect(res.isEmpty, isFalse);
+    });
+
+    test('ChatMessage properties', () {
+      final msg = ChatMessage(role: 'user', content: 'hello');
+      expect(msg.role, 'user');
+      expect(msg.content, 'hello');
+      expect(msg.timestamp, isNotNull);
+    });
+
+    test('Flashcard properties', () {
+      const fc = Flashcard(front: 'Q', back: 'A', sourceFileId: 'fid');
+      expect(fc.sourceFileId, 'fid');
+    });
+
+    test('AiModel properties', () {
+      const model = AiModel(id: 'm', name: 'model', provider: 'google', sizeGb: 1.5, isDownloaded: true, isActive: true);
+      expect(model.id, 'm');
+      expect(model.name, 'model');
+      expect(model.provider, 'google');
+      expect(model.sizeGb, 1.5);
+      expect(model.isDownloaded, isTrue);
+      expect(model.isActive, isTrue);
+    });
+
+    test('IndexStats properties', () {
+      final stats = IndexStats(indexedFiles: 1, pendingFiles: 2, failedFiles: 3, lastIndexedAt: DateTime.now(), isRunning: true);
+      expect(stats.indexedFiles, 1);
+      expect(stats.pendingFiles, 2);
+      expect(stats.failedFiles, 3);
+      expect(stats.lastIndexedAt, isNotNull);
+      expect(stats.isRunning, isTrue);
+    });
+
+    test('StubSearchRepository remaining methods', () async {
+      const repo = StubSearchRepository();
+      expect(await repo.findByColor('hex'), isEmpty);
+      expect(await repo.findVisuallySimialar('id'), isEmpty);
+    });
+
+    test('StubStorageRepository remaining methods', () async {
+      const repo = StubStorageRepository();
+      expect(await repo.getSimilarImageGroups(), isEmpty);
+      expect(await repo.getHeatmap(), isNotNull);
+      await repo.safeDelete(['id']);
+      await repo.secureDelete(['id']);
+    });
+
+    test('StubThumbnailRepository remaining methods', () async {
+      const repo = StubThumbnailRepository();
+      expect(await repo.getThumbnail('id'), isNull);
+      await repo.generateThumbnail('id');
+      await repo.clearCache();
     });
   });
 }

@@ -265,7 +265,48 @@ class RustFfi {
     }
   }
 
-  static bool get isAvailable => _lib != null && !_loadFailed;
+  static void initializeMockBindings() {
+    _init = (Pointer<Utf8> dir) => mockInitResult;
+    _isInitialized = () => 0;
+    _version = () => '0.1.0'.toNativeUtf8();
+    _freeString = (Pointer<Utf8> ptr) {
+      try { malloc.free(ptr); } catch (_) {}
+    };
+    _countFiles = () => 5;
+    _listFiles = (int limit, int offset) => '[]'.toNativeUtf8();
+    _getFile = (Pointer<Utf8> id) => 'null'.toNativeUtf8();
+    _search = (Pointer<Utf8> q) => '[]'.toNativeUtf8();
+    _storageStats = () => '{"total_files": 5, "total_bytes": 1000}'.toNativeUtf8();
+    _indexFile = (Pointer<Utf8> p) => 0;
+    _batchDelete = (Pointer<Utf8> ids) => 0;
+    _vaultAdd = (Pointer<Utf8> id) => 0;
+    _vaultRemove = (Pointer<Utf8> id) => 0;
+    _vaultList = () => '[]'.toNativeUtf8();
+
+    _convertDocument = (Pointer<Utf8> inPtr, Pointer<Utf8> outPtr) => 0;
+    _processImage = (Pointer<Utf8> inPtr, Pointer<Utf8> outPtr, int w, int h, int q) => 0;
+    _normalizeWav = (Pointer<Utf8> inPtr, Pointer<Utf8> outPtr) => 0;
+    _archiveList = (Pointer<Utf8> archivePath) => '[]'.toNativeUtf8();
+    _archiveCreate = (Pointer<Utf8> outPtr, Pointer<Utf8> pathsPtr) => 0;
+    _archiveExtract = (Pointer<Utf8> archivePtr, Pointer<Utf8> outPtr) => 0;
+    _backupPerform = (Pointer<Utf8> dirPtr, Pointer<Utf8> pathPtr, Pointer<Utf8> keyPtr) => 0;
+    _backupRestore = (Pointer<Utf8> pathPtr, Pointer<Utf8> dirPtr, Pointer<Utf8> keyPtr) => 0;
+    
+    _tagList = () => '[]'.toNativeUtf8();
+    _tagCreate = (Pointer<Utf8> namePtr, Pointer<Utf8> colorPtr) => 0;
+    _tagFile = (Pointer<Utf8> fPtr, Pointer<Utf8> tPtr) => 0;
+    
+    _collectionList = () => '[]'.toNativeUtf8();
+    _collectionCreate = (Pointer<Utf8> namePtr, Pointer<Utf8> descPtr) => 0;
+    _collectionAddFile = (Pointer<Utf8> colPtr, Pointer<Utf8> filePtr) => 0;
+    
+    _getLargeFiles = (int minSize) => '[]'.toNativeUtf8();
+    _hashFile = (Pointer<Utf8> fileId) => 0;
+  }
+
+  static bool isAvailableOverride = false;
+  static bool get isAvailable => isAvailableOverride || (_lib != null && !_loadFailed);
+  static int mockInitResult = 0;
 
   // Invocation Helpers
   static int init(String dataDir) {

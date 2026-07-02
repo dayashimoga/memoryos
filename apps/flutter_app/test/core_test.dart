@@ -93,6 +93,73 @@ void main() {
       );
       expect(e.timeAgo, 'just now');
     });
+
+    test('timeAgo returns correct formatting for minutes, hours, days, weeks, months, years', () {
+      final now = DateTime.now();
+      
+      final e1 = FileEntry(
+        id: 'x', path: '/tmp/x', filename: 'x', extension: '', fileType: FileType.unknown, sizeBytes: 0,
+        createdAt: now, modifiedAt: now.subtract(const Duration(minutes: 5)),
+      );
+      expect(e1.timeAgo, '5m ago');
+
+      final e2 = FileEntry(
+        id: 'x', path: '/tmp/x', filename: 'x', extension: '', fileType: FileType.unknown, sizeBytes: 0,
+        createdAt: now, modifiedAt: now.subtract(const Duration(hours: 2)),
+      );
+      expect(e2.timeAgo, '2h ago');
+
+      final e3 = FileEntry(
+        id: 'x', path: '/tmp/x', filename: 'x', extension: '', fileType: FileType.unknown, sizeBytes: 0,
+        createdAt: now, modifiedAt: now.subtract(const Duration(days: 3)),
+      );
+      expect(e3.timeAgo, '3d ago');
+
+      final e4 = FileEntry(
+        id: 'x', path: '/tmp/x', filename: 'x', extension: '', fileType: FileType.unknown, sizeBytes: 0,
+        createdAt: now, modifiedAt: now.subtract(const Duration(days: 14)),
+      );
+      expect(e4.timeAgo, '2w ago');
+
+      final e5 = FileEntry(
+        id: 'x', path: '/tmp/x', filename: 'x', extension: '', fileType: FileType.unknown, sizeBytes: 0,
+        createdAt: now, modifiedAt: now.subtract(const Duration(days: 90)),
+      );
+      expect(e5.timeAgo, '3mo ago');
+
+      final e6 = FileEntry(
+        id: 'x', path: '/tmp/x', filename: 'x', extension: '', fileType: FileType.unknown, sizeBytes: 0,
+        createdAt: now, modifiedAt: now.subtract(const Duration(days: 730)),
+      );
+      expect(e6.timeAgo, '2y ago');
+    });
+
+    test('Tag properties', () {
+      const tag = Tag(id: 't1', name: 'tag', color: '#ff0000');
+      expect(tag.props, ['t1']);
+    });
+
+    test('Collection copyWith', () {
+      final col = Collection(
+        id: 'c1',
+        name: 'Work',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      final updated = col.copyWith(
+        id: 'c2',
+        name: 'Personal',
+        description: 'Desc',
+        fileCount: 5,
+        isSmart: true,
+      );
+      expect(updated.id, 'c2');
+      expect(updated.name, 'Personal');
+      expect(updated.description, 'Desc');
+      expect(updated.fileCount, 5);
+      expect(updated.isSmart, isTrue);
+      expect(col.props, ['c1']);
+    });
   });
 
   group('FileType.fromExtension', () {
@@ -136,6 +203,14 @@ void main() {
       expect(FileType.fromExtension('PDF'), FileType.pdf);
       expect(FileType.fromExtension('MP3'), FileType.audio);
     });
+    test('more file types matching', () {
+      expect(FileType.fromExtension('ppt'), FileType.presentation);
+      expect(FileType.fromExtension('py'), FileType.code);
+      expect(FileType.fromExtension('ttf'), FileType.font);
+      expect(FileType.fromExtension('db'), FileType.database);
+      expect(FileType.fromExtension('doc'), FileType.document);
+      expect(FileType.code.isCode, isTrue);
+    });
   });
 
   group('StorageStats', () {
@@ -156,6 +231,17 @@ void main() {
     test('formattedTotal returns GB for large sizes', () {
       const stats = StorageStats(totalSizeBytes: 2 * 1024 * 1024 * 1024);
       expect(stats.formattedTotal, contains('GB'));
+    });
+
+    test('formattedTotal returns correct formatting for small sizes', () {
+      const stats = StorageStats(
+        totalSizeBytes: 512,
+        usedSizeBytes: 2048,
+        duplicateSizeBytes: 10 * 1024,
+      );
+      expect(stats.formattedTotal, '512 B');
+      expect(stats.formattedUsed, '2.0 KB');
+      expect(stats.formattedRecoverable, '10.0 KB');
     });
 
     test('Equatable equality', () {
