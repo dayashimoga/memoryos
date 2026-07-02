@@ -22,6 +22,7 @@ abstract class FileRepository {
   Future<List<FileEntry>> getByDateRange(DateTime from, DateTime to);
   Future<List<FileEntry>> getSimilarFiles(String fileId);
   Future<void> importFile(String path);
+  Future<int> importDirectory(String path);
   Future<void> batchDelete(List<String> ids);
   Future<void> batchTag(List<String> ids, List<String> tags);
   Future<void> batchMove(List<String> ids, String collectionId);
@@ -290,6 +291,8 @@ class StubFileRepository implements FileRepository {
   Future<List<FileEntry>> getSimilarFiles(String fileId) async => [];
   @override
   Future<void> importFile(String path) async {}
+  @override
+  Future<int> importDirectory(String path) async => 0;
   @override
   Future<void> batchDelete(List<String> ids) async {}
   @override

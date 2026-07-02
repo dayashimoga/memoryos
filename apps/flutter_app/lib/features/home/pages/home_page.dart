@@ -13,6 +13,7 @@ import 'package:memoryos/core/domain/repositories.dart';
 import 'package:memoryos/core/ffi/rust_ffi.dart';
 import 'package:memoryos/core/theme/app_theme.dart';
 import 'package:memoryos/core/widgets/shared_widgets.dart';
+import 'package:memoryos/core/di/service_locator.dart';
 
 /// Redesigned Home Dashboard — wired to HomeBloc for real data.
 class HomePage extends StatefulWidget {
@@ -35,13 +36,31 @@ class _HomePageState extends State<HomePage> {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                 content: Text(importState.stage),
                 backgroundColor: DesignTokens.success,
-                duration: const Duration(seconds: 4),
+                duration: Duration(
+                    seconds: importState.failedFiles > 0 ? 6 : 4),
               ));
               context.read<ImportBloc>().add(ImportResetRequested());
             } else if (importState.status == ImportStatus.failure) {
               ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(importState.error ?? 'Import failed'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(importState.stage),
+                    if (importState.error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          importState.error!,
+                          style: const TextStyle(fontSize: 11),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
                 backgroundColor: DesignTokens.error,
+                duration: const Duration(seconds: 6),
               ));
               context.read<ImportBloc>().add(ImportResetRequested());
             }
@@ -1101,7 +1120,7 @@ class _FileCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Large preview area
+          // Large preview area with real thumbnail for images
           Container(
             height: index % 2 == 0 ? 140 : 180, // Staggered height
             width: double.infinity,
@@ -1111,9 +1130,35 @@ class _FileCard extends StatelessWidget {
                 top: Radius.circular(DesignTokens.radiusLg),
               ),
             ),
-            child: Center(
-              child: FileTypeDisplay.iconBox(entry.extension, boxSize: 56),
-            ),
+            child: entry.fileType == FileType.image
+                ? FutureBuilder<dynamic>(
+                    future: ServiceLocator.thumbnailRepo
+                        .getThumbnail(entry.id),
+                    builder: (context, snap) {
+                      if (snap.hasData && snap.data != null) {
+                        return ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(DesignTokens.radiusLg),
+                          ),
+                          child: Image.memory(
+                            snap.data!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            height: double.infinity,
+                          ),
+                        );
+                      }
+                      return Center(
+                        child: FileTypeDisplay.iconBox(
+                            entry.extension,
+                            boxSize: 56),
+                      );
+                    },
+                  )
+                : Center(
+                    child: FileTypeDisplay.iconBox(entry.extension,
+                        boxSize: 56),
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.all(DesignTokens.space12),
@@ -1122,6 +1167,12 @@ class _FileCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
+                    if (entry.isFavorite)
+                      const Padding(
+                        padding: EdgeInsets.only(right: 4),
+                        child: Icon(Icons.favorite_rounded,
+                            size: 12, color: DesignTokens.error),
+                      ),
                     Expanded(
                       child: Text(
                         entry.filename,
@@ -1152,6 +1203,22 @@ class _FileCard extends StatelessWidget {
                             ?.copyWith(fontSize: 10)),
                   ],
                 ),
+                // Show summary snippet if available
+                if (entry.summary != null && entry.summary!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      entry.summary!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                            color: isDark
+                                ? const Color(0xFF64748B)
+                                : const Color(0xFF94A3B8),
+                          ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1180,7 +1247,9 @@ class _FileContextMenu extends StatelessWidget {
           case 'open':
             context.go('/file/${entry.id}');
           case 'favorite':
-            context.read<HomeBloc>();
+            context
+                .read<HomeBloc>()
+                .add(HomeToggleFavoriteRequested(entry.id));
           case 'ask_ai':
             context.go('/chat');
           case 'delete':
@@ -1233,7 +1302,9 @@ class _FileContextMenu extends StatelessWidget {
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.read<HomeBloc>();
+              context
+                  .read<HomeBloc>()
+                  .add(HomeDeleteFileRequested(entry.id));
             },
             style: FilledButton.styleFrom(backgroundColor: DesignTokens.error),
             child: const Text('Remove'),
@@ -1249,7 +1320,8 @@ class _FileContextMenu extends StatelessWidget {
 class _ImportSheet extends StatelessWidget {
   static const _options = [
     (Icons.photo_library_rounded, 'Photo Library', 'Import photos and videos'),
-    (Icons.folder_open_rounded, 'Files & Folders', 'Import any file type'),
+    (Icons.folder_open_rounded, 'Files', 'Import individual files'),
+    (Icons.create_new_folder_rounded, 'Entire Folder', 'Import a folder tree recursively'),
     (
       Icons.screenshot_monitor_rounded,
       'Screenshots Folder',
@@ -1260,17 +1332,24 @@ class _ImportSheet extends StatelessWidget {
   ];
 
   Future<void> _handleImport(BuildContext context, String optionName) async {
-    final homeBloc = context.read<HomeBloc>();
     final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context); // Dismiss sheet first
     try {
+      if (optionName == 'Entire Folder') {
+        final dirPath = await fp.FilePicker.platform.getDirectoryPath();
+        if (dirPath != null && dirPath.isNotEmpty && context.mounted) {
+          context.read<ImportBloc>().add(ImportFolderStarted(dirPath));
+        }
+        return;
+      }
+
       fp.FilePickerResult? result;
       if (optionName == 'Photo Library') {
         result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.media,
           allowMultiple: true,
         );
-      } else if (optionName == 'Files & Folders' ||
+      } else if (optionName == 'Files' ||
           optionName == 'Screenshots Folder') {
         result = await fp.FilePicker.platform.pickFiles(
           type: fp.FileType.any,

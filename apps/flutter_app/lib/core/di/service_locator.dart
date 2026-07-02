@@ -83,7 +83,12 @@ class ServiceLocator {
     _storageBloc = StorageBloc(_storageRepo);
     _aiBloc = AiBloc(_aiRepo);
     _collectionsBloc = CollectionsBloc(_collectionRepo);
-    _importBloc = ImportBloc(_fileRepo, _homeBloc);
+    _importBloc = ImportBloc(
+      _fileRepo,
+      _homeBloc,
+      storageBloc: _storageBloc,
+      collectionsBloc: _collectionsBloc,
+    );
 
     // Kick off initial AI model check
     _aiBloc.add(AiCheckModel());

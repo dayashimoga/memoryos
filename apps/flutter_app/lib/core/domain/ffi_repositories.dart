@@ -23,15 +23,20 @@ class FfiFileRepository implements FileRepository {
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       modifiedAt: DateTime.tryParse(map['modified_at'] ?? '') ?? DateTime.now(),
       tags: List<String>.from(map['tags'] ?? []),
-      summary: map['summary'],
-      indexingStatus: map['indexing_status'] == 'Completed'
+      summary: map['summary'] as String?,
+      ocrText: map['ocr_text'] as String?,
+      phash: map['phash'] as String?,
+      indexingStatus: map['indexing_status'] == 'Completed' ||
+              map['indexing_status'] == '"Completed"'
           ? IndexingStatus.completed
-          : map['indexing_status'] == 'Failed'
+          : map['indexing_status'] == 'Failed' ||
+                  map['indexing_status'] == '"Failed"'
               ? IndexingStatus.failed
-              : map['indexing_status'] == 'InProgress'
+              : map['indexing_status'] == 'InProgress' ||
+                      map['indexing_status'] == '"InProgress"'
                   ? IndexingStatus.indexing
                   : IndexingStatus.pending,
-      isFavorite: map['is_favorite'] == true || false,
+      isFavorite: map['is_favorite'] == true || map['is_favorite'] == 1,
     );
   }
 
@@ -188,8 +193,33 @@ class FfiFileRepository implements FileRepository {
   @override
   Future<void> importFile(String path) async {
     if (RustFfi.isAvailable) {
-      RustFfi.indexFile(path);
+      final result = RustFfi.indexFile(path);
+      // Auto-generate thumbnail for image files after successful import
+      if (result == 0) {
+        final ext = path.split('.').last.toLowerCase();
+        if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].contains(ext)) {
+          try {
+            final dir = await getApplicationDocumentsDirectory();
+            final thumbDir = '${dir.path}/memoryos/thumbnails';
+            await Directory(thumbDir).create(recursive: true);
+            // Use filename hash as thumb key since we don't have the UUID here
+            final thumbKey = path.hashCode.toRadixString(16);
+            final thumbPath = '$thumbDir/$thumbKey.png';
+            RustFfi.generateThumbnail(path, thumbPath, 256);
+          } catch (_) {
+            // Thumbnail generation is best-effort — don't fail the import
+          }
+        }
+      }
     }
+  }
+
+  @override
+  Future<int> importDirectory(String path) async {
+    if (RustFfi.isAvailable) {
+      return RustFfi.indexDirectory(path);
+    }
+    return 0;
   }
 
   @override

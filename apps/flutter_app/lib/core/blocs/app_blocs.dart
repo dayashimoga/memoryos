@@ -25,6 +25,20 @@ class HomeFileImported extends HomeEvent {
   List<Object?> get props => [path];
 }
 
+class HomeDeleteFileRequested extends HomeEvent {
+  final String id;
+  const HomeDeleteFileRequested(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
+class HomeToggleFavoriteRequested extends HomeEvent {
+  final String id;
+  const HomeToggleFavoriteRequested(this.id);
+  @override
+  List<Object?> get props => [id];
+}
+
 enum HomeStatus { initial, loading, loaded, error }
 
 class HomeState extends Equatable {
@@ -69,6 +83,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<HomeLoadRequested>(_onLoad);
     on<HomeRefreshRequested>(_onLoad);
     on<HomeFileImported>(_onFileImported);
+    on<HomeDeleteFileRequested>(_onDeleteFile);
+    on<HomeToggleFavoriteRequested>(_onToggleFavorite);
   }
 
   Future<void> _onLoad(HomeEvent event, Emitter<HomeState> emit) async {
@@ -94,6 +110,26 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       HomeFileImported event, Emitter<HomeState> emit) async {
     await _files.importFile(event.path);
     add(HomeRefreshRequested());
+  }
+
+  Future<void> _onDeleteFile(
+      HomeDeleteFileRequested event, Emitter<HomeState> emit) async {
+    try {
+      await _files.deleteFile(event.id);
+      add(HomeRefreshRequested());
+    } catch (e) {
+      emit(state.copyWith(status: HomeStatus.error, error: e.toString()));
+    }
+  }
+
+  Future<void> _onToggleFavorite(
+      HomeToggleFavoriteRequested event, Emitter<HomeState> emit) async {
+    try {
+      await _files.toggleFavorite(event.id);
+      add(HomeRefreshRequested());
+    } catch (e) {
+      emit(state.copyWith(status: HomeStatus.error, error: e.toString()));
+    }
   }
 }
 
@@ -631,6 +667,13 @@ class ImportStarted extends ImportEvent {
   List<Object?> get props => [paths];
 }
 
+class ImportFolderStarted extends ImportEvent {
+  final String directoryPath;
+  const ImportFolderStarted(this.directoryPath);
+  @override
+  List<Object?> get props => [directoryPath];
+}
+
 class ImportResetRequested extends ImportEvent {}
 
 enum ImportStatus { idle, processing, success, failure }
@@ -642,6 +685,8 @@ class ImportState extends Equatable {
   final String stage;
   final int totalFiles;
   final int processedFiles;
+  final int failedFiles;
+  final List<String> failedPaths;
   final String? error;
 
   const ImportState({
@@ -651,6 +696,8 @@ class ImportState extends Equatable {
     this.stage = '',
     this.totalFiles = 0,
     this.processedFiles = 0,
+    this.failedFiles = 0,
+    this.failedPaths = const [],
     this.error,
   });
 
@@ -661,6 +708,8 @@ class ImportState extends Equatable {
     String? stage,
     int? totalFiles,
     int? processedFiles,
+    int? failedFiles,
+    List<String>? failedPaths,
     String? error,
   }) =>
       ImportState(
@@ -670,6 +719,8 @@ class ImportState extends Equatable {
         stage: stage ?? this.stage,
         totalFiles: totalFiles ?? this.totalFiles,
         processedFiles: processedFiles ?? this.processedFiles,
+        failedFiles: failedFiles ?? this.failedFiles,
+        failedPaths: failedPaths ?? this.failedPaths,
         error: error ?? this.error,
       );
 
@@ -681,6 +732,7 @@ class ImportState extends Equatable {
         stage,
         totalFiles,
         processedFiles,
+        failedFiles,
         error,
       ];
 }
@@ -688,9 +740,19 @@ class ImportState extends Equatable {
 class ImportBloc extends Bloc<ImportEvent, ImportState> {
   final FileRepository _files;
   final HomeBloc _homeBloc;
+  final StorageBloc? _storageBloc;
+  final CollectionsBloc? _collectionsBloc;
 
-  ImportBloc(this._files, this._homeBloc) : super(const ImportState()) {
+  ImportBloc(
+    this._files,
+    this._homeBloc, {
+    StorageBloc? storageBloc,
+    CollectionsBloc? collectionsBloc,
+  })  : _storageBloc = storageBloc,
+        _collectionsBloc = collectionsBloc,
+        super(const ImportState()) {
     on<ImportStarted>(_onImportStarted);
+    on<ImportFolderStarted>(_onFolderImportStarted);
     on<ImportResetRequested>(_onReset);
   }
 
@@ -702,44 +764,120 @@ class ImportBloc extends Bloc<ImportEvent, ImportState> {
       status: ImportStatus.processing,
       totalFiles: event.paths.length,
       processedFiles: 0,
+      failedFiles: 0,
+      failedPaths: const [],
       currentFile: '',
       progress: 0.0,
-      stage: 'Initializing import...',
+      stage: 'Preparing import...',
     ));
 
     int processed = 0;
+    int failed = 0;
+    final failedPaths = <String>[];
+
     for (final path in event.paths) {
       final filename = path.split('/').last.split('\\').last;
+
+      // Stage 1: Validating
       emit(state.copyWith(
         currentFile: filename,
-        stage: 'Indexing & extracting metadata...',
-        progress: processed / event.paths.length,
+        stage: 'Validating file...',
+        progress: (processed + 0.1) / event.paths.length,
+      ));
+
+      // Stage 2: Indexing (metadata + hash + text + categorize + DB insert)
+      emit(state.copyWith(
+        stage: 'Indexing \u2022 metadata \u2022 categorizing...',
+        progress: (processed + 0.3) / event.paths.length,
       ));
 
       try {
         await _files.importFile(path);
       } catch (e) {
-        emit(state.copyWith(error: e.toString()));
+        failed++;
+        failedPaths.add(filename);
+        emit(state.copyWith(
+          failedFiles: failed,
+          failedPaths: List.from(failedPaths),
+          stage: 'Failed: $filename',
+        ));
       }
 
       processed++;
       emit(state.copyWith(
         processedFiles: processed,
         progress: processed / event.paths.length,
+        stage: processed < event.paths.length
+            ? 'Processing next file...'
+            : 'Finalizing...',
       ));
     }
 
+    // Build completion message
+    final successCount = processed - failed;
+    String message;
+    if (failed == 0) {
+      message = 'Successfully imported $successCount file${successCount == 1 ? '' : 's'}.';
+    } else {
+      message =
+          'Imported $successCount file${successCount == 1 ? '' : 's'}, $failed failed.';
+    }
+
     emit(ImportState(
-      status: ImportStatus.success,
+      status: failed == processed ? ImportStatus.failure : ImportStatus.success,
       totalFiles: event.paths.length,
       processedFiles: processed,
+      failedFiles: failed,
+      failedPaths: failedPaths,
       currentFile: '',
       progress: 1.0,
-      stage: 'Successfully imported $processed files.',
+      stage: message,
+      error: failed > 0 ? 'Failed: ${failedPaths.join(", ")}' : null,
     ));
 
-    // Auto-refresh home dashboard stats & recent files
+    // Auto-refresh all dependent blocs
     _homeBloc.add(HomeRefreshRequested());
+    _storageBloc?.add(StorageScanRequested());
+    _collectionsBloc?.add(CollectionsLoadRequested());
+  }
+
+  Future<void> _onFolderImportStarted(
+      ImportFolderStarted event, Emitter<ImportState> emit) async {
+    emit(const ImportState(
+      status: ImportStatus.processing,
+      totalFiles: 0,
+      processedFiles: 0,
+      currentFile: '',
+      progress: 0.0,
+      stage: 'Scanning directory...',
+    ));
+
+    try {
+      final count = await _files.importDirectory(event.directoryPath);
+
+      emit(ImportState(
+        status: count >= 0 ? ImportStatus.success : ImportStatus.failure,
+        totalFiles: count > 0 ? count : 0,
+        processedFiles: count > 0 ? count : 0,
+        currentFile: '',
+        progress: 1.0,
+        stage: count > 0
+            ? 'Successfully imported $count file${count == 1 ? '' : 's'} from folder.'
+            : 'No new files found in folder.',
+        error: count < 0 ? 'Failed to scan directory' : null,
+      ));
+    } catch (e) {
+      emit(ImportState(
+        status: ImportStatus.failure,
+        stage: 'Folder import failed',
+        error: e.toString(),
+      ));
+    }
+
+    // Auto-refresh all dependent blocs
+    _homeBloc.add(HomeRefreshRequested());
+    _storageBloc?.add(StorageScanRequested());
+    _collectionsBloc?.add(CollectionsLoadRequested());
   }
 
   void _onReset(ImportResetRequested event, Emitter<ImportState> emit) {
